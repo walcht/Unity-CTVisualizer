@@ -1,2 +1,30 @@
-# Unity-Immersive-Analytics
-An immersive analytics (IA) with a focus on optimized volumetric data rendering for AR built on top of the Unity game engine
+# Unity CTVisualizer
+
+A Unity3D package for efficient volumetric data direct rendering and manipulation.
+
+## Workflow
+
+CT datasets with supported formats are converted using a Python script into a .uvds
+(Unity Volumetric DataSet) format; a format that we defined and that our C# Unity
+importer expects.
+
+![workflow](https://github.com/walcht/Unity-Immersive-Analytics/assets/89390465/29c3654e-de77-4038-99e7-85f77f641acd)
+
+We decided to use Python for parsing CT dataset formats and converting them to uvds
+because:
+1.  the excelent support certain Python packages provide for imaging data
+    formats (e.g., DICOM)
+1.  We believe that using Python for data manipulation tasks is convenient
+1.  Datasets are supposed to be converted before runtime, therefore execution
+    speed is not a core objective for this part
+1.  We want to seperate code that deals with various dataset formats with code
+    that deals with visualization tasks
+
+## Performance Statistics
+
+TODO: Add performance statistics for datasets with various sizes and characteristics
+here.
+
+## Limitations
+
+## License
