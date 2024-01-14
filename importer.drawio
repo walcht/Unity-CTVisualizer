@@ -1,0 +1,25 @@
+<mxfile host="65bd71144e">
+    <diagram id="eZ7E7CzJr8EXRD6tGukm" name="Page-1">
+        <mxGraphModel dx="3400" dy="1374" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="13" value="CT Dataset Formats" style="swimlane;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="-360" y="30" width="460" height="400" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="DICOM" style="swimlane;whiteSpace=wrap;html=1;" parent="13" vertex="1">
+                    <mxGeometry x="10" y="40" width="440" height="350" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" value="&lt;div&gt;&amp;nbsp;&lt;/div&gt;&lt;ul&gt;&lt;li&gt;international standard format (very widely used)&lt;/li&gt;&lt;li&gt;.dcm file extension&lt;/li&gt;&lt;li&gt;a header + image datasets combined into one file&lt;br&gt;&lt;/li&gt;&lt;ul&gt;&lt;li&gt;header: patient demographics, image dimension, acquisition parameters, pixel intensity, matrix size, color space, and crucial information for properly displaying the images.&lt;/li&gt;&lt;li&gt;image datasets: binary format for single frame or multiple frames which can be reconstructed using the header&lt;/li&gt;&lt;/ul&gt;&lt;li&gt;header + data in single file to avoid seperation of patient data from actual images data&lt;/li&gt;&lt;/ul&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=wrap;verticalAlign=middle;overflow=hidden;" parent="10" vertex="1">
+                    <mxGeometry x="10" y="30" width="420" height="310" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" style="edgeStyle=none;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=18;" edge="1" parent="1" source="16" target="10">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;&lt;font style=&quot;&quot;&gt;C# Package:&amp;nbsp;&lt;/font&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&lt;b&gt;fo-dicom&lt;/b&gt;&lt;br&gt;&lt;/span&gt;&lt;/font&gt;&lt;pre id=&quot;dotnet-cli-text&quot; class=&quot;install-script&quot;&gt;&lt;span class=&quot;install-command-row&quot;&gt;dotnet add package fo-dicom --version 5.1.2&lt;/span&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="-810" y="190" width="390" height="110" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
