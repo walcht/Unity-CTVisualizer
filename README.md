@@ -8,7 +8,7 @@ CT datasets with supported formats are converted using a Python script into a .u
 (Unity Volumetric DataSet) format; a format that we defined and that our C# Unity
 importer expects.
 
-![workflow](https://github.com/walcht/Unity-Immersive-Analytics/assets/89390465/29c3654e-de77-4038-99e7-85f77f641acd)
+![workflow](https://github.com/walcht/Unity-Immersive-Analytics/assets/89390465/9f1fb7ff-60d1-4539-9200-a70c15e69b46)
 
 We decided to use Python for parsing CT dataset formats and converting them to uvds
 because:
