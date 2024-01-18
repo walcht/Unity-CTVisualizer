@@ -1,0 +1,27 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="root" style="flex-grow: 1;">
+        <ui:VisualElement name="dataset-input" style="flex-grow: 0; flex-direction: row; flex-shrink: 0; min-height: 30px; margin-bottom: 4px;">
+            <ui:TextField picking-mode="Ignore" value="dataset path" readonly="true" password="false" keyboard-type="Default" name="dataset-path" tooltip="Absolute filepath of the selected UVDS dataset." style="opacity: 1; display: flex; visibility: visible; overflow: hidden; flex-direction: row; text-overflow: clip; white-space: normal; -unity-font-style: normal; flex-grow: 1;" />
+            <ui:Button text="Select UVDS Dataset" parse-escape-sequences="true" display-tooltip-when-elided="true" tooltip="Shows a file dialog to select a .uvds file from the file system." name="dataset-file-dialoge" style="flex-grow: 0; white-space: normal; -unity-font-style: bold;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="dataset-metadata" style="flex-grow: 1;">
+            <ui:Label tabindex="-1" text="Dataset Metadata (readonly)" parse-escape-sequences="true" display-tooltip-when-elided="true" />
+            <ui:Vector3Field label="volume dims" name="volume-dims" focusable="false" />
+            <ui:Vector3Field label="voxel dims" name="voxel-dims" />
+            <ui:FloatField label="data max" value="42.2" name="data-max" />
+            <ui:FloatField label="data min" value="42.2" name="data-min" />
+            <ui:EnumField label="texture format" type="UnityEngine.TextureFormat, UnityEngine.CoreModule" value="RFloat" name="texture-format" />
+        </ui:VisualElement>
+        <ui:VisualElement name="btc-parameters" style="flex-grow: 1;">
+            <ui:Label tabindex="-1" text="Data Manipulation (requires regeneration)" parse-escape-sequences="true" display-tooltip-when-elided="true" />
+            <ui:FloatField label="clamp max" value="42.2" name="clamp-max" />
+            <ui:FloatField label="clamp min" value="42.2" name="clamp-min" />
+        </ui:VisualElement>
+        <ui:VisualElement name="visualization-parameters" style="flex-grow: 1;">
+            <ui:Label tabindex="-1" text="Visualization Parameters" parse-escape-sequences="true" display-tooltip-when-elided="true" />
+            <ui:Vector3Field label="position" name="volume-position" />
+            <ui:Vector3Field label="rotation" name="volume-rotation" />
+        </ui:VisualElement>
+        <ui:Button text="GENERATE VOLUME" parse-escape-sequences="true" display-tooltip-when-elided="true" name="generate-volume" tooltip="Processes input dataset alongside its manipulation parameters and generates its volumetric visualization." style="min-height: 30px;" />
+    </ui:VisualElement>
+</ui:UXML>

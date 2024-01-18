@@ -7,6 +7,7 @@ import numpy as np
 from dataclasses import dataclass
 from numpy.typing import NDArray
 import logging
+import argparse
 
 texture_format_mapping = {
     "MONOCHROME": 0,  # single channel
@@ -24,6 +25,8 @@ class UVDS:
     voxeldimY: np.float32
     voxeldimZ: np.float32
     textureformat: np.uint8
+    minDensity: np.int32
+    maxDensity: np.int32
     densities: NDArray[np.float32]
 
 
@@ -37,7 +40,7 @@ def get_voxel_depth(sliceLocations: List[float]) -> float:
 def write_udvs_binary(uvds_data: UVDS, uvds_fp: str) -> None:
     # properly serialize output according to UDVS format
     logging.info(f"writing binary UVDS data to: {uvds_fp} ...")
-    with open(uvds_fp, "wb") as output:
+    with open(uvds_fp, "ab") as output:
         output.write(uvds_data.imagewidth.tobytes())
         output.write(uvds_data.imageheight.tobytes())
         output.write(uvds_data.nbrslices.tobytes())
@@ -45,6 +48,8 @@ def write_udvs_binary(uvds_data: UVDS, uvds_fp: str) -> None:
         output.write(uvds_data.voxeldimY.tobytes())
         output.write(uvds_data.voxeldimZ.tobytes())
         output.write(uvds_data.textureformat.tobytes())
+        output.write(uvds_data.minDensity.tobytes())
+        output.write(uvds_data.maxDensity.tobytes())
         output.write(uvds_data.densities.tobytes())
     logging.info(f"UVDS binary available at: {uvds_fp}")
 
@@ -68,11 +73,18 @@ def main(dirOrfilePath: str, uvds_fp: str) -> None:
         # data has to be converted to densities
         data = np.empty(nbrslices * width * height, dtype=np.float32)
         for idx_slice in range(nbrslices):
-            logging.info(f"converting slice number: {idx_slice + 1}\t of file: {files[idx_slice].filename}")
+            logging.info(
+                f"converting slice number: {idx_slice + 1:4} of file: "
+                + f"{os.path.basename(files[idx_slice].filename)}"  # type: ignore
+            )
             flattened_array = files[idx_slice].pixel_array.flatten() * np.float32(
                 files[idx_slice].RescaleSlope
             ) + np.float32(files[idx_slice].RescaleIntercept)
             data[idx_slice * width * height : (idx_slice + 1) * width * height] = flattened_array
+        minDensity = data.min()
+        maxDensity = data.max()
+        # convert into [0.00, 1.00] range
+        data = data - minDensity / (maxDensity - minDensity)
         uvds_data = UVDS(
             imagewidth=np.uint16(width),
             imageheight=np.uint16(height),
@@ -81,6 +93,8 @@ def main(dirOrfilePath: str, uvds_fp: str) -> None:
             voxeldimY=np.float32(files[0].PixelSpacing[1]),
             voxeldimZ=np.float32(voxel_depth),
             textureformat=np.uint8(texture_format),
+            minDensity=np.int32(minDensity),
+            maxDensity=np.int32(maxDensity),
             densities=data,
         )
         write_udvs_binary(uvds_data, uvds_fp_wext)
@@ -92,6 +106,10 @@ def main(dirOrfilePath: str, uvds_fp: str) -> None:
         data = dataset.pixel_array.flatten() * np.float32(dataset.RescaleSlope) + np.float32(
             dataset.RescaleIntercept
         )
+        minDensity = data.min()
+        maxDensity = data.max()
+        # convert into [0.00, 1.00] range
+        data = data - minDensity / (maxDensity - minDensity)
         uvds_data = UVDS(
             imagewidth=np.uint16(dataset.Columns),
             imageheight=np.uint16(dataset.Rows),
@@ -100,6 +118,8 @@ def main(dirOrfilePath: str, uvds_fp: str) -> None:
             voxeldimY=np.float32(dataset.PixelSpacing[1]),
             voxeldimZ=np.float32(0.0),
             textureformat=np.uint8(texture_format),
+            minDensity=np.int32(minDensity),
+            maxDensity=np.int32(maxDensity),
             densities=data,
         )
         write_udvs_binary(uvds_data, uvds_fp_wext)
@@ -108,8 +128,8 @@ def main(dirOrfilePath: str, uvds_fp: str) -> None:
 
 
 if __name__ == "__main__":
-    logging.root.setLevel(logging.INFO)
+    logging.basicConfig(format="%(msecs)dms [%(levelname)s]: %(message)s", level=logging.INFO)
     main(
         "/home/walidchtioui/ct_datasets/example02",
-        "/home/walidchtioui/Projects/Unity-Immersive-Analytics/Datasets/test_04.uvds",
+        "/home/walidchtioui/Projects/Unity-Immersive-Analytics/Datasets/test_01.uvds",
     )
