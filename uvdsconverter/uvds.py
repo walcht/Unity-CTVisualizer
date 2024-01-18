@@ -24,7 +24,6 @@ class UVDS:
     voxeldimX: np.float32
     voxeldimY: np.float32
     voxeldimZ: np.float32
-    textureformat: np.uint8
     minDensity: np.int32
     maxDensity: np.int32
     densities: NDArray[np.float32]
@@ -47,7 +46,6 @@ def write_udvs_binary(uvds_data: UVDS, uvds_fp: str) -> None:
         output.write(uvds_data.voxeldimX.tobytes())
         output.write(uvds_data.voxeldimY.tobytes())
         output.write(uvds_data.voxeldimZ.tobytes())
-        output.write(uvds_data.textureformat.tobytes())
         output.write(uvds_data.minDensity.tobytes())
         output.write(uvds_data.maxDensity.tobytes())
         output.write(uvds_data.densities.tobytes())
@@ -92,7 +90,6 @@ def main(dirOrfilePath: str, uvds_fp: str) -> None:
             voxeldimX=np.float32(files[0].PixelSpacing[0]),
             voxeldimY=np.float32(files[0].PixelSpacing[1]),
             voxeldimZ=np.float32(voxel_depth),
-            textureformat=np.uint8(texture_format),
             minDensity=np.int32(minDensity),
             maxDensity=np.int32(maxDensity),
             densities=data,
@@ -117,7 +114,6 @@ def main(dirOrfilePath: str, uvds_fp: str) -> None:
             voxeldimX=np.float32(dataset.PixelSpacing[0]),
             voxeldimY=np.float32(dataset.PixelSpacing[1]),
             voxeldimZ=np.float32(0.0),
-            textureformat=np.uint8(texture_format),
             minDensity=np.int32(minDensity),
             maxDensity=np.int32(maxDensity),
             densities=data,
@@ -130,6 +126,6 @@ def main(dirOrfilePath: str, uvds_fp: str) -> None:
 if __name__ == "__main__":
     logging.basicConfig(format="%(msecs)dms [%(levelname)s]: %(message)s", level=logging.INFO)
     main(
-        "/home/walidchtioui/ct_datasets/example02",
-        "/home/walidchtioui/Projects/Unity-Immersive-Analytics/Datasets/test_01.uvds",
+        "/home/walidchtioui/ct_datasets/example_00",
+        "/home/walidchtioui/Projects/Unity-Immersive-Analytics/Datasets/test_02.uvds",
     )

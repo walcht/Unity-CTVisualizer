@@ -1,12 +1,14 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
     <ui:VisualElement name="root" style="flex-grow: 1;">
         <ui:VisualElement name="dataset-input" style="flex-grow: 0; flex-direction: row; flex-shrink: 0; min-height: 30px; margin-bottom: 4px;">
-            <ui:TextField picking-mode="Ignore" value="dataset path" readonly="true" password="false" keyboard-type="Default" name="dataset-path" tooltip="Absolute filepath of the selected UVDS dataset." style="opacity: 1; display: flex; visibility: visible; overflow: hidden; flex-direction: row; text-overflow: clip; white-space: normal; -unity-font-style: normal; flex-grow: 1;" />
-            <ui:Button text="Select UVDS Dataset" parse-escape-sequences="true" display-tooltip-when-elided="true" tooltip="Shows a file dialog to select a .uvds file from the file system." name="dataset-file-dialoge" style="flex-grow: 0; white-space: normal; -unity-font-style: bold;" />
+            <ui:TextField picking-mode="Ignore" value="dataset path" readonly="false" password="false" keyboard-type="Default" name="dataset-path" tooltip="Absolute filepath of the selected UVDS dataset." style="opacity: 1; display: flex; visibility: visible; overflow: hidden; flex-direction: row; text-overflow: clip; white-space: normal; -unity-font-style: normal; flex-grow: 1;" />
+            <ui:Button text="Select UVDS Dataset" parse-escape-sequences="true" display-tooltip-when-elided="true" tooltip="Shows a file dialog to select a .uvds file from the file system." name="select-dataset-path" style="flex-grow: 0; white-space: normal; -unity-font-style: bold;" />
         </ui:VisualElement>
         <ui:VisualElement name="dataset-metadata" style="flex-grow: 1;">
             <ui:Label tabindex="-1" text="Dataset Metadata (readonly)" parse-escape-sequences="true" display-tooltip-when-elided="true" />
-            <ui:Vector3Field label="volume dims" name="volume-dims" focusable="false" />
+            <ui:IntegerField label="volume width (px)" value="42" name="volume-width" readonly="true" />
+            <ui:IntegerField label="volume height (px)" value="42" name="volume-height" readonly="true" />
+            <ui:IntegerField label="number of slices" value="42" name="volume-slices" readonly="true" />
             <ui:Vector3Field label="voxel dims" name="voxel-dims" />
             <ui:FloatField label="data max" value="42.2" name="data-max" />
             <ui:FloatField label="data min" value="42.2" name="data-min" />

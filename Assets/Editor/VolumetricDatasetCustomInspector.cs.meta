@@ -3,7 +3,9 @@ guid: 7320d46a46d764cb680a378b0c375c37
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - m_VolumetricDatasetInspectorXML: {fileID: 9197481963319205126, guid: 2223c0f14ebd35f3c911652c4723f159,
+      type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

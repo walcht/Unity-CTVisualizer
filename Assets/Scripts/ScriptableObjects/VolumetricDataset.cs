@@ -13,35 +13,36 @@ namespace UnityCTVisualizer {
         const ushort MAX_TEXTURE3D_DIM = 2048;
         
         [SerializeField, Tooltip("UVDS dataset absolute path. Call LoadUVDS after setting this to properly load the dataset.")]
-        string _datasetPath;
+        string m_DatasetPath;
         public string DatasetPath {
-            get => _datasetPath;
+            get => m_DatasetPath;
             set {
                 if (!File.Exists(value)) {
                     Debug.LogError("Non exsitant filepath to a UVDS dataset was provided. Aborting ...");
                     return;
                 }
-                _datasetPath = value;
-                LoadUVDS(_datasetPath);
+                m_DatasetPath = value;
+                LoadUVDS();
             }
         }
 
-        ushort imageWidth;
-        ushort imageHeight;
-        ushort nbrSlices;
+        public ushort imageWidth;
+        public ushort imageHeight;
+        public ushort nbrSlices;
+
         float voxelDimX;
         float voxelDimY;
         float voxelDimZ;
         TextureFormat textureFormat;
         int minDensity;
         int maxDensity;
-        Texture3D volumetricTex;
+        public Texture3D volumetricTex;
 
         // values calculated from input dataset
         int dimension;
 
-        private void LoadUVDS(string uvdsFilePath) {
-            using (var stream = File.Open(uvdsFilePath, FileMode.Open))
+        public void LoadUVDS() {
+            using (var stream = File.Open(m_DatasetPath, FileMode.Open))
             {
                 using (var reader = new BinaryReader(stream))
                 {
@@ -58,10 +59,10 @@ namespace UnityCTVisualizer {
                     voxelDimX = reader.ReadSingle();
                     voxelDimY = reader.ReadSingle();
                     voxelDimZ = reader.ReadSingle();
-                    textureFormat = (TextureFormat)reader.ReadUInt16();
                     minDensity = reader.ReadInt32();
                     maxDensity = reader.ReadInt32();
                     
+                    textureFormat = TextureFormat.RFloat;
                     volumetricTex = new Texture3D(imageWidth, imageHeight, nbrSlices, textureFormat, false);
                     volumetricTex.wrapMode = TextureWrapMode.Clamp;
                     
@@ -79,7 +80,7 @@ namespace UnityCTVisualizer {
                             Debug.LogError($"TextureFormat {textureFormat} is currently not supported. Aborting ...");
                             return;
                     }
-                    if (i != imageHeight) {
+                    if (i != imageWidth * imageHeight * nbrSlices) {
                         Debug.LogError("Less elements in provided UVDS dataset than expected. Aborting ...");
                         return;
                     }
