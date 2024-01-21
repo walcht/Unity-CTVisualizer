@@ -18,7 +18,7 @@ class DicomConverter(BaseConverter):
             logging.info("returning voxel depth with highest frequency")
         return u_slices[np.argmax(u_slices_count)]
 
-    def import_dataset(self, dataset_dir_or_fp: str) -> UVDS:
+    def convert_dataset(self, dataset_dir_or_fp: str) -> UVDS:
         if os.path.isdir(dataset_dir_or_fp):  # a directory of .dcm files was provided
             files: List[pydicom.FileDataset] = []
             ordered_files_list = glob.glob(os.path.join(dataset_dir_or_fp, "*.dcm"), recursive=False)
@@ -79,7 +79,7 @@ class DicomConverter(BaseConverter):
             f"{dataset_dir_or_fp} is neither a valid directory path nor a valid filepath."
         )
 
-    def is_this_importer_suitable(self, dataset_dir_or_fp: str) -> bool:
+    def is_this_converter_suitable(self, dataset_dir_or_fp: str) -> bool:
         if os.path.isdir(dataset_dir_or_fp):
             dcm_files = glob.glob(os.path.join(dataset_dir_or_fp, "*.dcm"), recursive=False)
             return len(dcm_files) > 0

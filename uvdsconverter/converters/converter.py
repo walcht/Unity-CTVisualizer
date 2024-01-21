@@ -67,6 +67,11 @@ class UVDS:
             raise FileExistsError(f"provided uvds output path: {uvds_fp} already exists.")
         logging.info(f"writing binary UVDS data to: {uvds_fp} ...")
         with open(uvds_fp, "ab") as output:
+            # TODO: [Adrienne] binary files can be really large. We can compress them using ZIP then write
+            #       them (with .zip extension). This function should take an option that specifies whether to
+            #       use compression or not, then following this SO guide:
+            #       https://stackoverflow.com/questions/2463770/python-in-memory-zip-library, the data should
+            #       be compressed in a ZIP archive.
             self.write_binary_stream(output)
         logging.info(f"UVDS binary available at: {uvds_fp}")
 
@@ -172,7 +177,7 @@ class BaseConverter(metaclass=BaseConverterMetaclass):
         ...
 
     @classmethod
-    def converter_factory(cls, dataset_dir_or_fp: str) -> BaseConverter:
+    def factory(cls, dataset_dir_or_fp: str) -> BaseConverter:
         """Factory for creating appropriate converters for a given dataset path.
 
         Parameters
