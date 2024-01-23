@@ -1,4 +1,4 @@
-from converters.converter import BaseConverter, UVDS
+from converter import BaseConverter, UVDS
 import os
 
 
@@ -27,7 +27,8 @@ class RawConverter(BaseConverter):
             return UVDS()
         raise FileNotFoundError(f"{dataset_dir_or_fp} is not a valid filepath.")
 
-    def is_this_converter_suitable(self, dataset_dir_or_fp: str) -> bool:
+    @staticmethod
+    def is_this_converter_suitable(dataset_dir_or_fp: str) -> bool:
         """Checks whether this raw dataset converter is suitable for the provided CT (or MRI) dataset
 
         Parameters
@@ -42,7 +43,5 @@ class RawConverter(BaseConverter):
         """
         if os.path.isfile(dataset_dir_or_fp):
             # TODO: [Adrienne] simplest thing is to check for file extension here. (".raw")
-            return False
-        raise FileNotFoundError(
-            f"{dataset_dir_or_fp} is neither a valid directory path nor a valid filepath."
-        )
+            pass
+        return False

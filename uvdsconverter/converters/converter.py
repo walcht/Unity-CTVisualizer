@@ -20,9 +20,9 @@ class UVDS:
     voxeldimX: np.float32 = np.float32(-1)
     voxeldimY: np.float32 = np.float32(-1)
     voxeldimZ: np.float32 = np.float32(-1)
-    minDensity: np.float32 = np.float32(-1)
-    maxDensity: np.float32 = np.float32(-1)
-    densities: NDArray[np.float32] = np.array([], dtype=np.float32)
+    minDensity: np.float16 = np.float16(-1)
+    maxDensity: np.float16 = np.float16(-1)
+    densities: NDArray[np.float16] = np.array([], dtype=np.float16)
 
     def write_binary_stream(self, uvds_stream: BufferedIOBase) -> None:
         """Writes UVDS binary to a buffered raw IO steam
@@ -137,12 +137,12 @@ class BaseConverterMetaclass(type, metaclass=ABCMeta):
         for base_cls in bases:
             # store reference to this converter class if it inherits from BaseConverter
             if base_cls == BaseConverter:
-                BaseConverter.importers.append(newly_created_cls)
+                BaseConverter.converters.append(newly_created_cls)
         return newly_created_cls
 
 
 class BaseConverter(metaclass=BaseConverterMetaclass):
-    importers: List[type] = []
+    converters: List[type] = []
 
     @abstractmethod
     def convert_dataset(self, dataset_dir_or_fp: str) -> UVDS:
@@ -160,8 +160,9 @@ class BaseConverter(metaclass=BaseConverterMetaclass):
         """
         ...
 
+    @staticmethod
     @abstractmethod
-    def is_this_converter_suitable(self, dataset_dir_or_fp: str) -> bool:
+    def is_this_converter_suitable(dataset_dir_or_fp: str) -> bool:
         """Checks whether this converter is suitable for the provided CT (or MRI) dataset
 
         Parameters
@@ -176,8 +177,8 @@ class BaseConverter(metaclass=BaseConverterMetaclass):
         """
         ...
 
-    @classmethod
-    def factory(cls, dataset_dir_or_fp: str) -> BaseConverter:
+    @staticmethod
+    def factory(dataset_dir_or_fp: str) -> BaseConverter:
         """Factory for creating appropriate converters for a given dataset path.
 
         Parameters
@@ -190,9 +191,11 @@ class BaseConverter(metaclass=BaseConverterMetaclass):
         BaseConverter
             suitable converter that can be used to convert the dataset to UVDS format
         """
-        for potential_importer in cls.importers:
-            if potential_importer.is_this_importer_suitable(dataset_dir_or_fp):
-                return potential_importer()
+        logging.debug(f"detected converters: {BaseConverter.converters}")
+        for potential_converter in BaseConverter.converters:
+            if potential_converter.is_this_converter_suitable(dataset_dir_or_fp):
+                logging.debug(f"selected converter: {potential_converter}")
+                return potential_converter()
         raise UnsupportedDatasetFormatException(
             f"provided dataset's format at: {dataset_dir_or_fp} is not supported"
         )
