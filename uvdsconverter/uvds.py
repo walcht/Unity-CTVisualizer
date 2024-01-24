@@ -2,7 +2,7 @@ import logging
 import click
 import converters
 
-logging.basicConfig(format="%(msecs)dms [%(levelname)s]: %(message)s", level=logging.INFO)
+logging.basicConfig(format="%(msecs)dms [%(levelname)s]: %(message)s", level=logging.DEBUG)
 
 
 @click.command()
