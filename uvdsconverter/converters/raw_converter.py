@@ -6,10 +6,9 @@ import click
 
 class RawConverter(BaseConverter):
     def convert_dataset(self, dataset_fp: str) -> UVDS:
-        # TODO: [Adrienne] mention in this documentation how are you going to populate missing fields (
-        #       because .raw files don't contain pixel spacing and other attributes...)
-        """Imports and converts RAW (.raw extension) dataset to Unity Volumetric DataSet (UVDS) format
-
+        """ Imports and converts RAW (.raw extension) dataset to Unity Volumetric DataSet (UVDS) format.
+            RAW files do not contain volume attributes in them such as width, height or depth, so when running the 
+            uvds.py script, command line prompts will ask the user to enter these values.
         Parameters
         ----------
         dataset_dir_or_fp : str
@@ -21,12 +20,6 @@ class RawConverter(BaseConverter):
             Instance of a UVDS dataclass containing converted import data attributes
         """
         if os.path.isfile(dataset_fp):
-            # TODO: Adrienne, please implement RawConverter that converts raw data input
-            #       (see test_datasets/raw/ directory for examples of RAW datasets)
-            #       Important thing to note: RAW datasets do not contain volume attributes in them! So you
-            #       can either request the user to supply additional arguments or you can leave them empty
-            #       (so that they are supplied in Unity)
-
             width = click.prompt("Enter width", type=int)
             height = click.prompt("Enter height", type=int)
             depth = click.prompt("Enter depth", type=int)
@@ -82,5 +75,5 @@ class RawConverter(BaseConverter):
         -------
         bool
             True if this raw dataset converter is suitable. False otherwise
-        """            # TODO: [Adrienne] simplest thing is to check for file extension here. (".raw")
+        """
         return os.path.isfile(dataset_fp) and os.path.splitext(dataset_fp)[-1].lower() == ".raw"
