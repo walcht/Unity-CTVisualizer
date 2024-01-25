@@ -5,10 +5,11 @@ import click
 
 
 class RawConverter(BaseConverter):
-    def convert_dataset(self,dataset_fp: str) -> UVDS:
+    def convert_dataset(self, dataset_fp: str) -> UVDS:
         # TODO: [Adrienne] mention in this documentation how are you going to populate missing fields (
         #       because .raw files don't contain pixel spacing and other attributes...)
         """Imports and converts RAW (.raw extension) dataset to Unity Volumetric DataSet (UVDS) format
+
         Parameters
         ----------
         dataset_dir_or_fp : str
@@ -32,10 +33,27 @@ class RawConverter(BaseConverter):
             voxeldimX = click.prompt("Enter voxel dimension x", type=float)
             voxeldimY = click.prompt("Enter voxel dimension y", type=float)
             voxeldimZ = click.prompt("Enter voxel dimension z", type=float)
+            endianness = click.prompt("Enter endianness (Little-endian - 1, Big-endian - 0)", type=int, default=1)
+            num_of_bytes_to_skip = click.prompt("Enter number of bytes to skip (header)", type=int, default=0)
+            
+            if endianness not in [0, 1]:
+                raise ValueError("Endianness should be 0 (Big-endian) or 1 (Little-endian).")
+            
+            dtype = np.uint8
+            if endianness == 0:
+                dtype = np.dtype(dtype).newbyteorder('>')
+            
             num_elements = width * height * depth
-            raw_data = np.empty(num_elements, dtype=np.float16)
+            raw_data = np.empty(num_elements, dtype=dtype)
+
             with open(dataset_fp, 'rb') as file:
-                raw_data = np.fromfile(file, dtype=np.float16, count=num_elements)
+                file.seek(num_of_bytes_to_skip)
+                actual_file_size = os.path.getsize(dataset_fp)
+                expected_file_size = num_elements * np.dtype(dtype).itemsize + num_of_bytes_to_skip
+                if expected_file_size > actual_file_size:
+                    raise ValueError(f"Expected file size ({expected_file_size} bytes) is greater than actual file size ({actual_file_size} bytes).")
+                raw_data = np.fromfile(file, dtype=dtype, count=num_elements)
+
             minDensity: np.float16 = raw_data.min()
             maxDensity: np.float16 = raw_data.max()
             return UVDS(
