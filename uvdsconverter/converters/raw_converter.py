@@ -20,20 +20,35 @@ class RawConverter(BaseConverter):
             Instance of a UVDS dataclass containing converted import data attributes
         """
         if os.path.isfile(dataset_fp):
+            endianness_options = ["L","B"]
+            data_type_options = {
+                "uint8": np.uint8,
+                "int8": np.int8,
+                "uint16": np.uint16,
+                "int16": np.int16,
+                "uint32": np.uint32,
+                "int32": np.int32
+            }
             width = click.prompt("Enter width", type=int)
             height = click.prompt("Enter height", type=int)
             depth = click.prompt("Enter depth", type=int)
             voxeldimX = click.prompt("Enter voxel dimension x", type=float)
             voxeldimY = click.prompt("Enter voxel dimension y", type=float)
             voxeldimZ = click.prompt("Enter voxel dimension z", type=float)
-            endianness = click.prompt("Enter endianness (Little-endian - 1, Big-endian - 0)", type=int, default=1)
-            num_of_bytes_to_skip = click.prompt("Enter number of bytes to skip (header)", type=int, default=0)
+            endianness = click.prompt(
+                "Enter endianness (Little-endian - L, Big-endian - B)",
+                type=click.Choice(endianness_options),
+                default="L"
+            )
+            num_of_bytes_to_skip = click.prompt("Enter number of bytes to skip (header size)", type=int, default=0)
+            data_type_str = click.prompt(
+                "Enter data type",
+                type=click.Choice(data_type_options.keys()),
+                default="uint8"
+            )
             
-            if endianness not in [0, 1]:
-                raise ValueError("Endianness should be 0 (Big-endian) or 1 (Little-endian).")
-            
-            dtype = np.uint8
-            if endianness == 0:
+            dtype = data_type_options[data_type_str]
+            if endianness == "B":
                 dtype = np.dtype(dtype).newbyteorder('>')
             
             num_elements = width * height * depth
