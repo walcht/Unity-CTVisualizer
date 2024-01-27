@@ -20,7 +20,7 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
 			#pragma fragment frag
             #include "UnityCG.cginc"
 
-            #define MAX_ITERATIONS 512
+            #define MAX_ITERATIONS 256
             #define BOUNDING_BOX_LONGEST_SEGMENT 1.732050808f  // diagonal of a cube
             #define STEP_SIZE 0.003382912f  // = (LONGEST_SEGMET / MAX_ITERATIONS)
             
@@ -72,8 +72,9 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
             struct v2f
             {
                 float4 clipVertex : SV_POSITION;
-                float3 modelVertex : TEXCOORD0;
-                float3 modelDir: TEXCOORD1;
+                float2 uv: TEXCOORD0;
+                float3 modelVertex : TEXCOORD1;
+                float3 worldVertex: TEXCOORD2;
             };
             
             /// <summary>
@@ -81,14 +82,16 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
             ///     case this should get called 8 times because the volume is
             ///     being drawn inside a Cube mesh.
             /// </summary>
-            v2f vert(float4 modelVertex: POSITION)
+            v2f vert(float4 modelVertex: POSITION, float2 uv: TEXCOORD0)
             {
                 v2f output;
                 output.clipVertex = UnityObjectToClipPos(modelVertex);
+                output.uv = uv;
                 output.modelVertex = modelVertex.xyz;
+                output.worldVertex = mul(unity_ObjectToWorld, modelVertex).xyz;
                 // TODO:  verify this interpolation
                 //        (or don't do it for the moment, optimize later?)
-                output.modelDir = -ObjSpaceViewDir(modelVertex);
+                // output.modelDir = -ObjSpaceViewDir(modelVertex);
                 return output;
             }
             
@@ -97,7 +100,8 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                 // initialize a ray in model space
                 Ray ray;
                 ray.origin = interpolated.modelVertex;
-                ray.dir = normalize(interpolated.modelDir);
+                float3 dir = interpolated.worldVertex - _WorldSpaceCameraPos;
+                ray.dir = normalize(mul(unity_WorldToObject, float4(dir, 1.0f))).xyz;
                 // TODO:    this is a uniform! Maybe don't do it in the fragment
                 //          shader?
                 // initialize the axis-aligned bounding box (AABB)
