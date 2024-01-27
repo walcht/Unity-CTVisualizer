@@ -3,6 +3,11 @@ namespace UnityCTVisualizer
     public enum TransferFunction
     {
         TF1D,
-        TF2D
+    }
+
+    public struct ControlPoint<T>
+    {
+        public float position;
+        public T value;
     }
 }
