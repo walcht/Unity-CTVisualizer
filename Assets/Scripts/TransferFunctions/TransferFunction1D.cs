@@ -45,7 +45,7 @@ namespace UnityCTVisualizer
             TextureFormat texFormat = SystemInfo.SupportsTextureFormat(TextureFormat.RGBAHalf)
                 ? TextureFormat.RGBAHalf
                 : TextureFormat.RGBAFloat;
-            texture = new Texture2D(textureWidth, textureHeight, texFormat, false);
+            Texture2D texture = new Texture2D(textureWidth, textureHeight, texFormat, false);
             Color[] pixelColorData = new Color[textureWidth * textureHeight];
             // TODO: [Adrienne] populate the pixelColorData array by interpolating provided control
             //                  colors and opacities.
@@ -65,7 +65,7 @@ namespace UnityCTVisualizer
             // 10.  populate pixelColorData array at current index and don't forget to take the color
             //      space into account!
 
-            texture.SetPixel(pixelColorData);
+            texture.SetPixels(pixelColorData);
             return texture;
         }
     }
