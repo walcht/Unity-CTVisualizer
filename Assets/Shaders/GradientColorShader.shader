@@ -2,7 +2,7 @@ Shader "UnityCTVisualizer/GradientColorShader"
 {
     Properties
     {
-        [NoScaleOffset] _MainTex ("1D Gradient Texture", 2D) = "white" {}
+        [NoScaleOffset] _MainTex ("Colors (RGBA) Gradient Texture", 2D) = "white" {}
     }
     SubShader
     {

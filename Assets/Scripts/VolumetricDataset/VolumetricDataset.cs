@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -58,19 +59,27 @@ namespace UnityCTVisualizer
         }
 
         [SerializeField]
-        float m_MinDensity;
+        float m_MinDensity = float.NegativeInfinity;
         public float MinDensity
         {
             get => m_MinDensity;
-            set { m_MinDensity = value; }
+            set
+            {
+                m_MinDensity = value;
+                m_MinDensity = Mathf.Max(m_MinDensity, m_ClampMinDensity);
+            }
         }
 
         [SerializeField]
-        float m_MaxDensity;
+        float m_MaxDensity = float.PositiveInfinity;
         public float MaxDensity
         {
             get => m_MaxDensity;
-            set { m_MaxDensity = value; }
+            set
+            {
+                m_MaxDensity = value;
+                m_MaxDensity = Mathf.Min(m_MaxDensity, m_ClampMaxDensity);
+            }
         }
 
         [SerializeField]
@@ -81,8 +90,29 @@ namespace UnityCTVisualizer
             set { m_Densities = value; }
         }
 
-        public float m_ClampMaxDensity;
-        public float m_ClampMinDensity;
+        [SerializeField]
+        float m_ClampMaxDensity = float.PositiveInfinity;
+        public float ClampMaxDensity
+        {
+            get => m_ClampMaxDensity;
+            set
+            {
+                m_ClampMaxDensity = value;
+                m_MaxDensity = Mathf.Min(m_MaxDensity, m_ClampMaxDensity);
+            }
+        }
+
+        [SerializeField]
+        float m_ClampMinDensity = float.NegativeInfinity;
+        public float ClampMinDensity
+        {
+            get => m_ClampMinDensity;
+            set
+            {
+                m_ClampMinDensity = value;
+                m_MinDensity = Mathf.Max(m_MinDensity, m_ClampMinDensity);
+            }
+        }
 
         [SerializeField]
         Texture3D m_DensitiesSampler = null;
@@ -110,9 +140,35 @@ namespace UnityCTVisualizer
             private set { m_DensitiesGradientSampler = value; }
         }
 
+        public const int HISTOGRAM_BINS = 1024;
+
         public bool IsVolumeGenerated()
         {
             return m_DensitiesSampler != null;
+        }
+
+        /// <summary>
+        /// Divides density range (after optional clamping) into HISTOGRAM_BINS bins.
+        /// </summary>
+        /// <returns>Array of frequencies that has the size: HISTOGRAM_BINS</returns>
+        public int[] GenerateBinFrequencies()
+        {
+            if (Densities == null)
+            {
+                Debug.LogError("Densities have to be initialized before calling this function.");
+                return null;
+            }
+            int[] frequencies = new int[HISTOGRAM_BINS];
+            float BIN_WIDTH = (m_MaxDensity - m_MinDensity) / HISTOGRAM_BINS;
+            for (int i = 0; i < Densities.Length; ++i)
+            {
+                int freqIdx = (int)
+                    Mathf.Floor(
+                        Mathf.Clamp(Densities[i], m_ClampMinDensity, m_ClampMaxDensity) / BIN_WIDTH
+                    );
+                ++frequencies[freqIdx];
+            }
+            return frequencies;
         }
 
         /// <summary>
@@ -140,7 +196,10 @@ namespace UnityCTVisualizer
                 for (int i = 0; i < Densities.Length; ++i)
                 {
                     pixelData[i] = Mathf.FloatToHalf(
-                        (Densities[i] - MinDensity) / (MaxDensity - MinDensity)
+                        (
+                            Mathf.Clamp(Densities[i], m_ClampMinDensity, m_ClampMaxDensity)
+                            - m_MinDensity
+                        ) / (m_MaxDensity - m_MinDensity)
                     );
                 }
                 m_DensitiesSampler.SetPixelData(pixelData, 0);
@@ -157,7 +216,11 @@ namespace UnityCTVisualizer
                 float[] pixelData = new float[Densities.Length];
                 for (int i = 0; i < Densities.Length; ++i)
                 {
-                    pixelData[i] = (Densities[i] - MinDensity) / (MaxDensity - MinDensity);
+                    pixelData[i] =
+                        (
+                            Mathf.Clamp(Densities[i], m_ClampMinDensity, m_ClampMaxDensity)
+                            - m_MinDensity
+                        ) / (m_MaxDensity - m_MinDensity);
                 }
                 m_DensitiesSampler.SetPixelData(pixelData, 0);
             }
