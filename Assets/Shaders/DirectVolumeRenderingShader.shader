@@ -27,7 +27,6 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
             sampler3D _Densities;
             sampler2D _TFColors;
             float _AlphaCutoff;
-            float _StepSize;
 
             /// <summary>
             ///     Parametric description of a ray: r = origin + t * direction
@@ -53,9 +52,9 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
             ///     https://tavianator.com/2022/ray_box_boundary.html
             /// </summary>
             void slabs(Ray r, Box b, out float t_in, out float t_out) {
-                float3 inverseDir = 1.0 / r.dir;
-                float3 t0 = (box.min - r.origin) * inverseDir;
-                float3 t1 = (box.max - r.origin) * inverseDir;
+                float3 inverseDir = 1.0f / r.dir;
+                float3 t0 = (b.min - r.origin) * inverseDir;
+                float3 t1 = (b.max - r.origin) * inverseDir;
                 float3 tmin = min(t0, t1);
                 float3 tmax = max(t0, t1);
                 t_in = max(max(tmin.x, tmin.y), tmin.z);
@@ -66,14 +65,14 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
             ///     Samples the one dimensional transfer function texture for
             ///     color and alpha.
             /// </summary>
-            float4 sampleTF1DColour(float density) {
+            float4 sampleTF1DColor(float density) {
                 return tex2D(_TFColors, float4(density, 0.0f, 0.0f, 0.0f));
             }
             
             struct v2f
             {
                 float4 clipVertex : SV_POSITION;
-                float3 worldVertex : TEXCOORD0
+                float3 modelVertex : TEXCOORD0;
                 float3 modelDir: TEXCOORD1;
             };
             
@@ -86,14 +85,14 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
             {
                 v2f output;
                 output.clipVertex = UnityObjectToClipPos(modelVertex);
-                output.worldVertex = mul(unity_ObjectToWorld, modelVertex).xyz;
+                output.modelVertex = modelVertex.xyz;
                 // TODO:  verify this interpolation
                 //        (or don't do it for the moment, optimize later?)
                 output.modelDir = -ObjSpaceViewDir(modelVertex);
                 return output;
             }
             
-            fixed4 frag(v2f interpolated) : SV_Target0
+            fixed4 frag(v2f interpolated) : SV_Target
             {
                 // initialize a ray in model space
                 Ray ray;
@@ -102,29 +101,29 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                 // TODO:    this is a uniform! Maybe don't do it in the fragment
                 //          shader?
                 // initialize the axis-aligned bounding box (AABB)
-                box aabb;
+                Box aabb;
                 aabb.min = float3(-0.5f, -0.5f, -0.5f);
                 aabb.max = float3(0.5f, 0.5f, 0.5f);
                 // intersect ray with the AABB and get parametric start and end values
                 float t_in;
                 float t_out;
-                intersect(ray, aabb, t_in, t_out);
+                slabs(ray, aabb, t_in, t_out);
             
                 float3 start = ray.origin;
                 float3 end = ray.origin + ray.dir * t_out;
                 // distance of segment intersecting with AABB volume
                 // TODO: do we need abs here?
                 float seg_len = abs(t_out - t_in);
-                int num_iterations = (int)clamp(seg_len / STEP_SIZE, 1, MAX_ITERATIONS)
+                int num_iterations = (int)clamp(seg_len / STEP_SIZE, 1, MAX_ITERATIONS);
                 float3 delta_step = normalize(end - start) * STEP_SIZE;
                 float4 accm_color = float4(0.0f, 0.0f, 0.0f, 0.0f);
-                float3 accm_ray = start
+                float3 accm_ray = start;
                 // TODO:    improve sampling loop (maybe use unroll with outside check?)
                 for (int iter = 0; iter < num_iterations; iter++)
                 {
                     float sampled_density = tex3D(_Densities, float4(accm_ray, 0.0f)).r;
                     // apply transfer function
-                    float4 src = sampleTF1DColour(sampled_density);
+                    float4 src = sampleTF1DColor(sampled_density);
                     // blending
                     accm_color = (1.0f - accm_color.a) * src + accm_color;
                     accm_ray += delta_step;
