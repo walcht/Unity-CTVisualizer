@@ -5,10 +5,11 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
 	    [NoScaleOffset] _Densities ("Densities", 3D) = "" {}
         [NoScaleOffset] _TFColors("Transfer Function Colors Texture", 2D) = "" {}
 		_AlphaCutoff ("Opacity Cutoff", Range(0.0, 1.0)) = 0.94
-        _StepSize ("Samples per Ray", Range(0.02, 0.08)) = 0.05;
 	}
 
 	SubShader {
+        Tags { "Queue" = "Transparent" "RenderType" = "Transparent" }
+        LOD 500
 		Cull Back
 		Blend SrcAlpha OneMinusSrcAlpha
 
