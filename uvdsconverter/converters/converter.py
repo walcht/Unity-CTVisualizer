@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 import logging
 import os
 import re
-
+import zipfile
 
 @dataclass
 class UVDS:
@@ -42,7 +42,7 @@ class UVDS:
         uvds_stream.write(self.maxDensity.tobytes())
         uvds_stream.write(self.densities.tobytes())
 
-    def write_binary(self, uvds_fp: str) -> None:
+    def write_binary(self, uvds_fp: str, compress: bool) -> None:
         """Write UVDS binary data to a provided filepath
 
         Parameters
@@ -51,7 +51,8 @@ class UVDS:
             absolute filepath to where the binary data is going to be written. Basename should end with the
             .uvds extension. If that is not the case, then whatever extension that was provided (if any) will
             be replaced with a .uvds extension.
-
+        compress: bool
+            specifies whether to use compression or not
         Raises
         ------
         FileExistsError
@@ -66,13 +67,15 @@ class UVDS:
         if os.path.isfile(uvds_fp):
             raise FileExistsError(f"provided uvds output path: {uvds_fp} already exists.")
         logging.info(f"writing binary UVDS data to: {uvds_fp} ...")
-        with open(uvds_fp, "ab") as output:
-            # TODO: [Adrienne] binary files can be really large. We can compress them using ZIP then write
-            #       them (with .zip extension). This function should take an option that specifies whether to
-            #       use compression or not, then following this SO guide:
-            #       https://stackoverflow.com/questions/2463770/python-in-memory-zip-library, the data should
-            #       be compressed in a ZIP archive.
-            self.write_binary_stream(output)
+        zip_path = f"{os.path.splitext(uvds_fp)[0]}.zip"
+        if compress:
+            logging.info(f"creating compressed UVDS file...")
+            with zipfile.ZipFile(zip_path, 'x', compression=zipfile.ZIP_DEFLATED) as zip_file:
+                with zip_file.open(os.path.basename(uvds_fp), 'w') as zip_file_inside:
+                    self.write_binary_stream(zip_file_inside)
+        else:
+            with open(uvds_fp, "ab") as output:
+                self.write_binary_stream(output)
         logging.info(f"UVDS binary available at: {uvds_fp}")
 
     @staticmethod

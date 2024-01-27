@@ -2,7 +2,7 @@ import logging
 import click
 import converters
 
-logging.basicConfig(format="%(msecs)dms [%(levelname)s]: %(message)s", level=logging.INFO)
+logging.basicConfig(format="%(msecs)dms [%(levelname)s]: %(message)s", level=logging.DEBUG)
 
 
 @click.command()
@@ -46,8 +46,7 @@ def run(
     """
     uvds_converter = converters.Converter.factory(dataset_dir_or_file_path)
     uvds = uvds_converter.convert_dataset(dataset_dir_or_file_path)
-    # TODO: [Adrienne] this should take the compress boolean option
-    uvds.write_binary(uvds_write_file_path)
+    uvds.write_binary(uvds_write_file_path, compress)
     logging.info("done")
 
 
