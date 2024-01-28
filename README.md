@@ -124,6 +124,12 @@ If the the value of a cell is one, we move down one level. When we reach the low
 </figure>
 </p>
 
+**Image Sources:**
+
+1. Image: [Efficient Ray Tracing of Volume Data - MARC LEVOY](https://www.cs.ucdavis.edu/~ma/ECS177/papers/levoy_raytrace_vol.pdf)
+2. Image: [Efficient Ray Tracing of Volume Data - MARC LEVOY](https://www.cs.ucdavis.edu/~ma/ECS177/papers/levoy_raytrace_vol.pdf)
+3. Image: [A Survey of Voxel Interpolation Methods and an Evaluation of Their Impact on Volumetric Map-Based Vi](https://www.youtube.com/watch?v=eHgETqZebiI)
+
 ### Early ray termination
 
 In early ray termination, sampling along a ray is stopped when the accumulated opacity of the ray reaches a set threshold. This indicates that a sufficiently dense material has been reached, so further sampling doesn't significantly affect the pixel color.
