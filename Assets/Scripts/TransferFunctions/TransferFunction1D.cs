@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace UnityCTVisualizer
 {
-    public static class TransferFunction
+    public static class TransferFunction1D
     {
         /// <summary>
         /// Generates a color look-up 1D (only needs one parameter: density) texture
@@ -23,7 +23,7 @@ namespace UnityCTVisualizer
         /// <param name="alphaControls">List of provided alphas (opacities). These are going to be
         /// interpolated to generate the texture opacities.</param>
         /// <returns>A 512 X 1 color and opacities (RGBA) 2D texture.</returns>
-        public static Texture2D TransferFunction1D(
+        public static Texture2D GenerateColorLookupTexture(
             List<ControlPoint<Color>> colorControls,
             List<ControlPoint<float>> alphaControls
         )
