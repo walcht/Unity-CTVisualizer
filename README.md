@@ -110,12 +110,12 @@ We treat voxels as points located on the vertices of cells, each having opacity 
 
 The empty space skipping algorithm starts on the top level M. When the ray enters the cell, we check its value. If the value of the cell is zero, we determine the next cell on the same level by following the ray. If the parent of the next cell and the parent of the current cell are different, we move up to the parent of the next cell, otherwise we move to the next cell following the ray. This makes it possible to quickly progress through empty spaces. 
 If the the value of a cell is one, we move down one level. When we reach the lowest level, we know that at least one of the voxels located on the vertices of the cell has an opacity value greater then 0. We sample the ray section that falls within this cell. We approximate the color and opacity of each sample point by trilinearly interpolating the color and opacity values of the eight surrounding voxels.
-<p>
+<figure>
 <img src="Documentation/2empty_space_skipping.png" alt="Ray tracing of hierarchical enumeration." width="400">
-<em>2. Ray tracing of hierarchical enumeration.</em>
-</p>
+<figcaption>2. Ray tracing of hierarchical enumeration.</figcaption>
+</figure>
 <p>
-<img src="Documentation/3trilinear_interpolation.png" alt="Ray tracing of hierarchical enumeration." width="400">
+<img src="Documentation/3trilinear_interpolation.png" alt="Ray tracing of hierarchical enumeration." width="200">
 <em>3. Trilinear interpolation</em>
 </p>
 
