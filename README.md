@@ -102,11 +102,17 @@ and also describe them with some nicely descriptive images?
 
 In this optimization method, we define volume levels which determine how many cells the volume should be divided into. On the 0. level we divide the volume into N x N x N cells, where N = 2^M. M + 1 is the number of levels, the levels are indexed from 0 to M. On the 1. level, we increase the size of cells, so that the size of each cell will be equal to the size of 8 cells of the previous level. On this level the volume is divided into N / 2 x N / 2 x N / 2 cells. We repeat this for each level until the volume contains only one cell. 
 
+![Screenshot 1](Documentation/1empty_space_skipping.png)
+*1. Hierarchical enumeration of object space for N = 5.*
+
 We treat voxels as points. Voxels are located on the vertices of cells and each of them have opacity and color. On the 0. level, a cell contains a 0, if all 8 voxels on its vertices have an opacity of 0. A cell on a higher level m (m > 0) contains a zero, if all 8 cells that made up this cell on level m - 1 contain zeros.
 
 The empty space skipping algorithm starts on the top level M. When the ray enters the cell, we check its value. If the value of the cell is 0, we determine the next cell on the same level by following the ray. If the parent of the next cell and the parent of the current cell are different, we move up to the parent of the next cell, otherwise we move to the next cell following the ray. This makes it possible to quickly progress through empty spaces. 
 
 If the cell contains 1,  we move down one level. When we reached the lowest level, we know that at least one of the voxels located on the vertices of the cell has an opacity value greater then 0. We sample the ray section that falls within this cell. We approximate the color and opacity of each sample point by calculating the trilinear interpolation of the eight surrounding voxel.
+
+![Screenshot 1](Documentation/2empty_space_skipping.png)
+*2. Ray tracing of hierarchical enumeration.*
 
 ## Performance Statistics
 
