@@ -88,15 +88,13 @@ Tested on these Unity versions:
 | Unity Version | OS             | Status | Notes |
 |---------------|----------------|--------|-------|
 | 2022.3.17f1   | 22.04.1-Ubuntu |:white_check_mark:||
+| 2022.3.17f1   | macOS 14.2.1   |:white_check_mark:||
 
 ## Usage
 
 ## Project Structure
 
 ## Optimization Techniques
-
-TODO: [Adrienne] can you provided the set of optimization techniques we implemented
-and also describe them with some nicely descriptive images?
 
 ### Empty space skipping
 
