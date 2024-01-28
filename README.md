@@ -102,21 +102,28 @@ and also describe them with some nicely descriptive images?
 
 In this optimization method, we define volume levels that determine the number of cells into which the volume should be divided. At level 0, we divide the volume into ![equation](https://latex.codecogs.com/svg.image?{\color{White}N\times&space;N\times&space;N}) cells, where ![equation](https://latex.codecogs.com/svg.image?{\color{White}N=2^{M}}). Here, ![equation](https://latex.codecogs.com/svg.image?{\color{White}M&plus;1}) represents the number of levels, and the levels are indexed from 0 to ![equation](https://latex.codecogs.com/svg.image?{\color{White}M}). On level 1, we increase the size of cells so that each cell is equal in size to 8 cells from the previous level. On this level, the volume is divided into  ![equation](https://latex.codecogs.com/svg.image?{\color{White}N\times&space;N\times&space;N}) cells. We repeat this process for each level until the volume contains only one cell.
 <p>
+<figure>
 <img src="Documentation/1empty_space_skipping.png" alt="Hierarchical enumeration of object space for N = 5." width="400">
-<em>1. Hierarchical enumeration of object space for N = 5.</em>
+<figcaption>1. Hierarchical enumeration of object space for N = 5.</figcaption>
+</figure>
 </p>
 
 We treat voxels as points located on the vertices of cells, each having opacity and color. On level 0, the value of a cell is zero if all eight voxels on its vertices have an opacity of zero. On a higher level `m` (`m > 0`), a cell contains a zero if all eight cells that make up this cell on level `m - 1` contain zeros.
 
 The empty space skipping algorithm starts on the top level M. When the ray enters the cell, we check its value. If the value of the cell is zero, we determine the next cell on the same level by following the ray. If the parent of the next cell and the parent of the current cell are different, we move up to the parent of the next cell, otherwise we move to the next cell following the ray. This makes it possible to quickly progress through empty spaces. 
 If the the value of a cell is one, we move down one level. When we reach the lowest level, we know that at least one of the voxels located on the vertices of the cell has an opacity value greater then 0. We sample the ray section that falls within this cell. We approximate the color and opacity of each sample point by trilinearly interpolating the color and opacity values of the eight surrounding voxels.
+<p>
 <figure>
 <img src="Documentation/2empty_space_skipping.png" alt="Ray tracing of hierarchical enumeration." width="400">
 <figcaption>2. Ray tracing of hierarchical enumeration.</figcaption>
 </figure>
+</p>
+
 <p>
+<figure>
 <img src="Documentation/3trilinear_interpolation.png" alt="Ray tracing of hierarchical enumeration." width="200">
-<em>3. Trilinear interpolation</em>
+<figcaption>3. Trilinear interpolation</figcaption>
+</figure>
 </p>
 
 ### Early ray termination
