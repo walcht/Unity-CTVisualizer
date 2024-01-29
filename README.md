@@ -129,7 +129,7 @@ In early ray termination, sampling along a ray is stopped when the accumulated o
 
 <p>
 <figure>
-<img src="Documentation/4early_ray_termination.png" alt="" width="200">
+<img src="Documentation/4early_ray_termination.png" alt="4. Volumetric compositioning" height="100">
 <figcaption>4. Volumetric compositioning</figcaption>
 </figure>
 </p>
