@@ -118,7 +118,7 @@ If the the value of a cell is one, we move down one level. When we reach the low
 
 <p>
 <figure>
-<img src="Documentation/3trilinear_interpolation.png" alt="Ray tracing of hierarchical enumeration." width="400">
+<img src="Documentation/3interpolation.png" alt="Ray tracing of hierarchical enumeration." width="400">
 <figcaption>3. Trilinear interpolation</figcaption>
 </figure>
 </p>
