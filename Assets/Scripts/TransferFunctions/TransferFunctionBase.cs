@@ -1,19 +1,55 @@
+using System;
+using UnityEngine;
+
 namespace UnityCTVisualizer
 {
+    public delegate void VoidHandler();
+
     public enum TransferFunction
     {
         TF1D,
+        // TF2D,
     }
 
-    public struct ControlPoint<T>
+    [Serializable]
+    public class ControlPoint<P, T>
     {
-        public float position;
-        public T value;
+        public VoidHandler OnValueChange;
 
-        public ControlPoint(float position, T value)
+        [SerializeField]
+        P m_Position;
+        public P Position
         {
-            this.position = position;
-            this.value = value;
+            get => m_Position;
+            set
+            {
+                m_Position = value;
+                OnValueChange?.Invoke();
+            }
         }
+
+        [SerializeField]
+        T m_Value;
+        public T Value
+        {
+            get => m_Value;
+            set
+            {
+                m_Value = value;
+                OnValueChange?.Invoke();
+            }
+        }
+
+        public ControlPoint(P position, T value)
+        {
+            this.Position = position;
+            this.Value = value;
+        }
+    }
+
+    public interface ITransferFunction
+    {
+        void TryUpdateColorLookupTexture();
+        event Action<Texture2D> TransferFunctionTexChange;
     }
 }

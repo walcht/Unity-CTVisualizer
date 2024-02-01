@@ -2,7 +2,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from io import BufferedIOBase
-from typing import Any, Dict, List, Tuple
+from typing import IO, Any, Dict, List, Tuple
 import numpy as np
 from numpy.typing import NDArray
 import logging
@@ -10,21 +10,22 @@ import os
 import re
 import zipfile
 
+
 @dataclass
 class UVDS:
     """Unity Volumetric DataSet (UVDS) data format"""
 
-    imagewidth: np.uint16 = np.uint16(-1)
-    imageheight: np.uint16 = np.uint16(-1)
-    nbrslices: np.uint16 = np.uint16(-1)
-    voxeldimX: np.float32 = np.float32(-1)
-    voxeldimY: np.float32 = np.float32(-1)
-    voxeldimZ: np.float32 = np.float32(-1)
-    minDensity: np.float16 = np.float16(-1)
-    maxDensity: np.float16 = np.float16(-1)
-    densities: NDArray[np.float16] = np.array([], dtype=np.float16)
+    imagewidth: np.uint16 = np.uint16(np.iinfo(np.uint16).max)  # crucial
+    imageheight: np.uint16 = np.uint16(np.iinfo(np.uint16).max)  # crucial
+    nbrslices: np.uint16 = np.uint16(np.iinfo(np.uint16).max)  # crucial
+    voxeldimX: np.float32 = np.float32(-1)  # optional
+    voxeldimY: np.float32 = np.float32(-1)  # optional
+    voxeldimZ: np.float32 = np.float32(-1)  # optional
+    minDensity: np.float16 = np.finfo(np.float16).max  # optional
+    maxDensity: np.float16 = np.finfo(np.float16).min  # optional
+    densities: NDArray[np.float16] = np.array([], dtype=np.float16)  # crucial
 
-    def write_binary_stream(self, uvds_stream: BufferedIOBase) -> None:
+    def write_binary_stream(self, uvds_stream: BufferedIOBase | IO[bytes]) -> None:
         """Writes UVDS binary to a buffered raw IO steam
 
         Parameters
@@ -66,16 +67,16 @@ class UVDS:
             logging.info("added .uvds extension to provided filepath")
         if os.path.isfile(uvds_fp):
             raise FileExistsError(f"provided uvds output path: {uvds_fp} already exists.")
-        logging.info(f"writing binary UVDS data to: {uvds_fp} ...")
-        zip_path = f"{os.path.splitext(uvds_fp)[0]}.zip"
         if compress:
-            logging.info(f"creating compressed UVDS file...")
-            with zipfile.ZipFile(zip_path, 'x', compression=zipfile.ZIP_DEFLATED) as zip_file:
-                with zip_file.open(os.path.basename(uvds_fp), 'w') as zip_file_inside:
+            logging.info(f"writing binary UVDS data to: {uvds_fp}.zip ...")
+            with zipfile.ZipFile(f"{uvds_fp}.zip", "x", compression=zipfile.ZIP_DEFLATED) as zip_file:
+                with zip_file.open(os.path.basename(uvds_fp), "w") as zip_file_inside:
                     self.write_binary_stream(zip_file_inside)
-        else:
-            with open(uvds_fp, "ab") as output:
-                self.write_binary_stream(output)
+            logging.info(f"UVDS binary available at: {uvds_fp}.zip")
+            return
+        logging.info(f"writing binary UVDS data to: {uvds_fp} ...")
+        with open(uvds_fp, "ab") as output:
+            self.write_binary_stream(output)
         logging.info(f"UVDS binary available at: {uvds_fp}")
 
     @staticmethod

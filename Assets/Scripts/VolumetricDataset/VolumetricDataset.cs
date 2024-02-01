@@ -1,4 +1,5 @@
-using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -116,7 +117,7 @@ namespace UnityCTVisualizer
 
         [SerializeField]
         Texture3D m_DensitiesSampler = null;
-        public Texture3D GetDensitiesSampler
+        public Texture3D DensitiesSamplerTexture
         {
             get
             {
@@ -151,7 +152,7 @@ namespace UnityCTVisualizer
         /// Divides density range (after optional clamping) into HISTOGRAM_BINS bins.
         /// </summary>
         /// <returns>Array of frequencies that has the size: HISTOGRAM_BINS</returns>
-        public int[] GenerateBinFrequencies()
+        public float[] GenerateBinFrequencies()
         {
             if (Densities == null)
             {
@@ -168,7 +169,14 @@ namespace UnityCTVisualizer
                     );
                 ++frequencies[freqIdx];
             }
-            return frequencies;
+            float[] normalizedFrequencies = new float[HISTOGRAM_BINS];
+            int freqMin = frequencies.Min();
+            float range = (float)(frequencies.Max() - freqMin);
+            for (int j = 0; j < HISTOGRAM_BINS; ++j)
+            {
+                normalizedFrequencies[j] = (frequencies[j] - freqMin) / range;
+            }
+            return normalizedFrequencies;
         }
 
         /// <summary>
@@ -231,26 +239,25 @@ namespace UnityCTVisualizer
         /// <summary>
         /// Exports generated volume densities texture
         /// </summary>
-        public void ExportDensitiesTexture(string exportPath = null)
+        public string ExportDensitiesTexture(string exportPath = null)
         {
             if (m_DensitiesSampler == null)
             {
-                Debug.LogError("Canno't export an uninitialized Texture3D");
-                return;
+                this.GenerateDensitiesTexture();
             }
             if (exportPath == null)
             {
                 System.DateTime centuryBegin = new System.DateTime(2024, 1, 1);
                 System.DateTime currentDate = System.DateTime.Now;
                 long elapsedTicks = (long)((currentDate.Ticks - centuryBegin.Ticks) / 10000.0f);
-                AssetDatabase.CreateAsset(
-                    m_DensitiesSampler,
-                    $"Assets/GeneratedTextures/texture3d_{elapsedTicks}"
-                );
-                return;
+                exportPath =
+                    "Assets/GeneratedTextures/densities_texture_"
+                    + $"{Path.GetFileNameWithoutExtension(m_DatasetPath)}_{elapsedTicks}";
+                AssetDatabase.CreateAsset(m_DensitiesSampler, exportPath);
+                return exportPath;
             }
-            // TODO: [Adrienne] can you add a check for export path before executing this code?
             AssetDatabase.CreateAsset(m_DensitiesSampler, exportPath);
+            return exportPath;
         }
 
         /// <summary>

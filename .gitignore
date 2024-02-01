@@ -75,3 +75,12 @@ crashlytics-build.properties
 __pycache__/
 *.py[cod]
 *$py.class
+
+# datasets
+Assets/ScriptableObjects/*
+!Assets/ScriptableObjects/.gitkeep
+Assets/UVDSDatasets/*
+!Assets/UVDSDatasets/.gitkeep
+
+# MacOS
+Assets/.DS_Store

@@ -1,7 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
-using UnityCTVisualizer;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -61,7 +58,7 @@ namespace UnityCTVisualizer
             Vector3Field volumeRotation = root.Q<Vector3Field>(name: "volume-rotation");
             FloatField volumeMinDensity = root.Q<FloatField>(name: "min-density");
             FloatField volumeMaxDensity = root.Q<FloatField>(name: "max-density");
-            Button generate_btn = root.Q<Button>(name: "generate-volume");
+            Button generate_densities_texture = root.Q<Button>(name: "generate-densites-texture");
             if (
                 select_ds_path_btn == null
                 || datasetPath == null
@@ -72,7 +69,7 @@ namespace UnityCTVisualizer
                 || volumeRotation == null
                 || volumeMinDensity == null
                 || volumeMaxDensity == null
-                || generate_btn == null
+                || generate_densities_texture == null
             )
             {
                 Debug.LogError(
@@ -105,10 +102,11 @@ namespace UnityCTVisualizer
                     evt.StopPropagation();
                 }
             );
-            generate_btn.RegisterCallback<ClickEvent>(
+            generate_densities_texture.RegisterCallback<ClickEvent>(
                 (ClickEvent evt) =>
                 {
-                    m_VolumetricDataset.GenerateDensitiesTexture();
+                    string exportPath = m_VolumetricDataset.ExportDensitiesTexture();
+                    Debug.Log($"exported densities Texture3D to: {exportPath}");
                     evt.StopPropagation();
                 }
             );

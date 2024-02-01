@@ -9,11 +9,11 @@
             <ui:IntegerField label="volume width (px)" value="42" name="volume-width" readonly="true" style="margin-top: 7px;" />
             <ui:IntegerField label="volume height (px)" value="42" name="volume-height" readonly="true" />
             <ui:IntegerField label="number of slices" value="42" name="volume-slices" readonly="true" />
-            <ui:Vector3Field label="volume scale" name="volume-scale" style="height: 19px; margin-top: 7px;" />
+            <ui:Vector3Field label="volume scale" name="volume-scale" tooltip="Scale vector in meters that will be applied to the volume&apos;s Transform" style="height: 19px; margin-top: 7px;" />
             <ui:Vector3Field label="volume rotation" name="volume-rotation" style="height: 19px; margin-top: 1px;" />
             <ui:FloatField label="data min" value="42.2" name="min-density" style="margin-top: 7px;" />
             <ui:FloatField label="data max" value="42.2" name="max-density" style="margin-top: 1px;" />
         </ui:VisualElement>
-        <ui:Button text="GENERATE VOLUME" parse-escape-sequences="true" display-tooltip-when-elided="true" name="generate-volume" tooltip="Processes input dataset alongside its manipulation parameters and generates its volumetric visualization." style="min-height: 30px; height: 35px;" />
+        <ui:Button text="GENERATE DENSITIES TEXTURE" parse-escape-sequences="true" display-tooltip-when-elided="true" name="generate-densites-texture" tooltip="Processes input dataset alongside its manipulation parameters and generates its volumetric visualization." style="min-height: 30px; height: 35px;" />
     </ui:VisualElement>
 </ui:UXML>

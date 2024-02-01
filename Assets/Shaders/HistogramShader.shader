@@ -2,11 +2,12 @@ Shader "Unlit/HistogramShader"
 {
     Properties
     {
-        _MainTex ("Texture", 2D) = "white" {}
+        _FrequencyBins ("Texture", 2D) = "" {}
     }
     SubShader
     {
         Tags { "RenderType"="Opaque" }
+        ZWrite Off
         LOD 100
 
         Pass
@@ -14,9 +15,6 @@ Shader "Unlit/HistogramShader"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            // make fog work
-            #pragma multi_compile_fog
-
             #include "UnityCG.cginc"
 
             struct appdata
