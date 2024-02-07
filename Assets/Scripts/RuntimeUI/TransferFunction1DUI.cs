@@ -1,4 +1,4 @@
-#define DEBUG_UI
+// #define DEBUG_UI
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,13 +17,32 @@ namespace UnityCTVisualizer
         ///////////////////////////////// IN-CURRENT or IN-CHILDREN REFERENCES //////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        public RawImage m_HistogramImage;
-        public RectTransform m_ColorGradientControlRange;
-        public RawImage m_GradientColorImage;
-        public Button m_ClearColors;
-        public Button m_ClearAlphas;
-        public ColorPickerButton m_ColorPicker;
-        public ColorPickerWrapper m_ColorPickerWrapper;
+        [SerializeField]
+        RawImage m_HistogramImage;
+
+        [SerializeField]
+        RectTransform m_ColorGradientControlRange;
+
+        [SerializeField]
+        RawImage m_GradientColorImage;
+
+        [SerializeField]
+        Button m_ClearColors;
+
+        [SerializeField]
+        Button m_ClearAlphas;
+
+        [SerializeField]
+        ColorPickerButton m_ColorPicker;
+
+        [SerializeField]
+        ColorPickerWrapper m_ColorPickerWrapper;
+
+        [SerializeField]
+        RectTransform m_TF1DCanvasTransform;
+
+        [SerializeField]
+        RectTransform m_ColorPickerTransform;
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////// PREFABS /////////////////////////////////////////////
@@ -42,8 +61,6 @@ namespace UnityCTVisualizer
         ////////////////////////////////////////// CACHED COMPONENTS ////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        RectTransform m_TF1DCanvasTransform;
-        RectTransform m_ColorPickerTransform;
         int MAIN_TEX_SHADER_ID;
 
         // -1 means None is selected which in turn means that we have no control points (empty list)
@@ -61,12 +78,8 @@ namespace UnityCTVisualizer
 
         void Awake()
         {
-            m_TF1DCanvasTransform = this.GetComponent<RectTransform>();
-            m_ColorPickerTransform = m_ColorPickerWrapper.gameObject.GetComponent<RectTransform>();
-
             m_ClearColors.onClick.AddListener(OnClearColorsClick);
             m_ColorPicker.OnClick += OnColorPickerClick;
-            m_ColorPicker.SetInteractiveness(false);
             m_ColorPickerWrapper.gameObject.SetActive(false);
 
             MAIN_TEX_SHADER_ID = Shader.PropertyToID("_MainTex");
@@ -175,6 +188,10 @@ namespace UnityCTVisualizer
                 Destroy(item);
             }
             m_ColorControlPoints.Clear();
+#if DEBUG_UI
+            Debug.Log("Removed all color control points");
+#endif
+            m_TransferFunctionData.TryUpdateColorLookupTexture();
         }
 
         void OnColorPickerClick()
@@ -227,8 +244,7 @@ namespace UnityCTVisualizer
 
         void OnTFTexChange(Texture2D newTex)
         {
-            Debug.Log("Main texture updated!");
-            m_GradientColorImage.material.SetTexture(MAIN_TEX_SHADER_ID, newTex);
+            m_GradientColorImage.texture = newTex;
         }
     }
 }

@@ -10,7 +10,7 @@ logging.basicConfig(format="%(msecs)dms [%(levelname)s]: %(message)s", level=log
 @click.argument("uvds-write-file_path", type=click.Path(exists=False, dir_okay=False))
 @click.option(
     "--compress/--no-compress",
-    default=True,
+    default=False,
     show_default=True,
     help="whether to compress output into a ZIP format",
 )

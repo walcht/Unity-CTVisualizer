@@ -12,12 +12,8 @@ namespace UnityCTVisualizer
         [Range(0.0f, 1.0f)]
         public float m_DisabledColorAlpha = 0.2f;
 
+        [SerializeField]
         Image m_ImageComponent;
-
-        void Awake()
-        {
-            m_ImageComponent = GetComponent<Image>();
-        }
 
         public void OnPointerClick(PointerEventData pointerEventData)
         {

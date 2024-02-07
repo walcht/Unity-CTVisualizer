@@ -1,0 +1,104 @@
+using System;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace UnityCTVisualizer
+{
+    public class VisualizationParametersUI : MonoBehaviour
+    {
+        public event Action<TF> OnTransferFunctionChange;
+
+        [SerializeField]
+        TMP_Dropdown m_TFDropDown;
+
+        [SerializeField]
+        ClampUI m_ClampMin;
+
+        [SerializeField]
+        ClampUI m_ClampMax;
+
+        [SerializeField]
+        Slider m_AlphaCutoff;
+
+        VolumetricDataset m_VolumetricDataset = null;
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////// CACHED COMPONENTS ////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        // previously selected transfer function
+        int m_PrevTFIndex = -1;
+
+        void Awake()
+        {
+            m_TFDropDown.options.Clear();
+            foreach (string enumName in Enum.GetNames(typeof(TF)))
+            {
+                m_TFDropDown.options.Add(new TMP_Dropdown.OptionData(enumName));
+            }
+            m_TFDropDown.onValueChanged.AddListener(OnTFDropDownChange);
+            m_ClampMin.OnInputFieldSubmit += OnClampMinSubmit;
+            m_ClampMin.OnToggleChange += OnClampMinToggle;
+            m_ClampMax.OnInputFieldSubmit += OnClampMaxSubmit;
+            m_ClampMax.OnToggleChange += OnClampMaxToggle;
+            m_AlphaCutoff.onValueChanged.AddListener(OnAlphaCutoffChange);
+        }
+
+        /// <summary>
+        /// Initializes the VolumetricDataset ScriptableObject this UI affects.
+        /// Call this exactly after initializing this component.
+        /// </summary>
+        /// <param name="volumetricDataset">Instance of VolumetricDataset ScriptableObject that this UI
+        /// communicates with</param>
+        public void Init(VolumetricDataset volumetricDataset)
+        {
+            m_VolumetricDataset = volumetricDataset;
+        }
+
+        public void SetTFDropDown(TF tf)
+        {
+            m_PrevTFIndex = m_TFDropDown.value;
+            m_TFDropDown.value = (int)tf;
+        }
+
+        void OnTFDropDownChange(int tfIndex)
+        {
+            if (tfIndex != m_PrevTFIndex)
+            {
+                OnTransferFunctionChange?.Invoke((TF)tfIndex);
+                m_PrevTFIndex = tfIndex;
+            }
+        }
+
+        void OnClampMinSubmit(float clampMin)
+        {
+            m_VolumetricDataset.ClampMinDensity = clampMin;
+        }
+
+        void OnClampMaxSubmit(float clampMax)
+        {
+            m_VolumetricDataset.ClampMaxDensity = clampMax;
+        }
+
+        void OnClampMinToggle(bool val)
+        {
+            if (!val)
+            {
+                m_VolumetricDataset.ClampMinDensity = Single.NegativeInfinity;
+                return;
+            }
+        }
+
+        void OnClampMaxToggle(bool val)
+        {
+            if (!val)
+            {
+                m_VolumetricDataset.ClampMaxDensity = Single.PositiveInfinity;
+                return;
+            }
+        }
+
+        void OnAlphaCutoffChange(float newVal) { }
+    }
+}

@@ -268,5 +268,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: df43560f348680711bd1c1521c34e899, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_ControlPointSelectable: {fileID: 6382492466175273119}
+  m_ControlPointTransform: {fileID: 1121839057581023739}
   m_PositionLabel: {fileID: 8116741513266661628}
   m_Image: {fileID: 4551760578775694662}

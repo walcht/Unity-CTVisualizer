@@ -29,6 +29,11 @@ namespace UnityCTVisualizer
             }
         }
         ITransferFunction m_TransferFunction = null;
+
+        /// <summary>
+        /// Sets transfer function for this volumetric object to use (for requesting color and alpha
+        /// lookup texture).
+        /// </summary>
         public ITransferFunction TransferFunction
         {
             private get => m_TransferFunction;
@@ -36,9 +41,11 @@ namespace UnityCTVisualizer
             {
                 if (value != m_TransferFunction)
                 {
-                    m_TransferFunction.TransferFunctionTexChange -= OnTransferFunctionTexChange;
+                    if (m_TransferFunction != null)
+                        m_TransferFunction.TransferFunctionTexChange -= OnTransferFunctionTexChange;
                     m_TransferFunction = value;
                     m_TransferFunction.TransferFunctionTexChange += OnTransferFunctionTexChange;
+                    m_TransferFunction.TryUpdateColorLookupTexture();
                 }
             }
         }
@@ -48,12 +55,6 @@ namespace UnityCTVisualizer
         void Awake()
         {
             m_AttachedMeshRenderer = gameObject.GetComponent<MeshRenderer>();
-        }
-
-        public void Init(VolumetricDataset volumetricDataset, ITransferFunction transferFunction)
-        {
-            VolumetricDataset = volumetricDataset;
-            TransferFunction = transferFunction;
         }
 
         void OnTransferFunctionTexChange(Texture2D newTex)

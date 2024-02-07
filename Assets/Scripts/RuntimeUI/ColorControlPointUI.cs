@@ -14,28 +14,32 @@ namespace UnityCTVisualizer
             IPointerClickHandler,
             ISelectHandler
     {
+        /// <summary>
+        /// Invoked when this color control point is selected. The ID assigned to this control point is
+        /// passed.
+        /// </summary>
         public event Action<int> ControlPointSelected;
-
-        /////////////////////////////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////// CACHED COMPONENTS ////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        Selectable m_ControlPointSelectable;
-        RectTransform m_ControlPointTransform;
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////// IN-CURRENT or IN-CHILDREN REFERENCES //////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 
         [SerializeField]
-        TMP_Text m_PositionLabel;
+        private Selectable m_ControlPointSelectable;
 
         [SerializeField]
-        Image m_Image;
+        private RectTransform m_ControlPointTransform;
+
+        [SerializeField]
+        private TMP_Text m_PositionLabel;
+
+        [SerializeField]
+        private Image m_Image;
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////// MISC ///////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
+
         const float DEFAULT_ARROW_ALPHA = 0.75f;
         Vector3 m_PositionVect = new(0, 0, 0);
         Vector2 m_AnchorMin = new(0, 0.5f);
@@ -47,10 +51,8 @@ namespace UnityCTVisualizer
             get => m_ControlPoint;
         }
 
-        void Awake()
+        private void Awake()
         {
-            m_ControlPointSelectable = this.GetComponent<Selectable>();
-            m_ControlPointTransform = this.GetComponent<RectTransform>();
             m_PositionLabel.gameObject.SetActive(true);
         }
 
@@ -58,6 +60,11 @@ namespace UnityCTVisualizer
         /////////////////////////////////////////// INITIALIZERS ////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+        /// <summary>
+        /// Initializes control point's attributes. Call this before enabling this behaviour.
+        /// </summary>
+        /// <param name="id">the unique ID assigned to this control point. Useful for identifying it</param>
+        /// <param name="cpData">initial control point data</param>
         public void Init(int id, ControlPoint<float, Color> cpData)
         {
             m_ID = id;
@@ -67,18 +74,13 @@ namespace UnityCTVisualizer
         }
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////// GETTERS //////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        public ControlPoint<float, Color> GetControlPoint()
-        {
-            return m_ControlPoint;
-        }
-
-        /////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////// SETTERS //////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+        /// <summary>
+        /// Sets the position for this control point; both in UI and in underlying control point data
+        /// </summary>
+        /// <param name="pos">normalized position. Values not in the range [0.0, 1.0] are clamped.</param>
         public void SetPosition(float pos)
         {
             m_ControlPoint.Position = Mathf.Clamp01(pos);
@@ -91,6 +93,10 @@ namespace UnityCTVisualizer
             m_PositionLabel.text = m_ControlPoint.Position.ToString("0.00");
         }
 
+        /// <summary>
+        /// Sets the color for this control point; both in UI and in underlying control point data
+        /// </summary>
+        /// <param name="col">new color value. Alpha component is ignored</param>
         public void SetColor(Color col)
         {
             col.a = DEFAULT_ARROW_ALPHA;

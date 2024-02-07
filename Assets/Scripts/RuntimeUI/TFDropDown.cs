@@ -6,13 +6,13 @@ using UnityEngine;
 [RequireComponent(typeof(TMP_Dropdown))]
 public class TFDropDown : MonoBehaviour
 {
+    [SerializeField]
     TMP_Dropdown m_DropDown;
     Dictionary<string, int> m_TFEnumDict;
     List<TMP_Dropdown.OptionData> m_TFOptions;
 
     void Awake()
     {
-        m_DropDown = gameObject.GetComponent<TMP_Dropdown>();
         List<TMP_Dropdown.OptionData> m_TFOptions = new();
         m_TFEnumDict = new();
         foreach (var enumName in Enum.GetNames(typeof(TransferFunction)))

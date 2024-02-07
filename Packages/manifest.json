@@ -40,14 +40,17 @@
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0",
-    "com.judahperez.hsvcolorpicker": "3.3.0"
+    "com.judahperez.hsvcolorpicker": "3.3.0",
+    "com.yasirkula.simplefilebrowser": "1.6.4",
+    "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask"
   },
   "scopedRegistries": [
     {
       "name": "package.openupm.com",
       "url": "https://package.openupm.com",
       "scopes": [
-        "com.judahperez.hsvcolorpicker"
+        "com.judahperez.hsvcolorpicker",
+        "com.yasirkula.simplefilebrowser"
       ]
     }
   ]

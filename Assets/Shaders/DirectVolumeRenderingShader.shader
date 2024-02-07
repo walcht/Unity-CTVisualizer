@@ -129,6 +129,7 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                     // apply transfer function
                     float4 src = sampleTF1DColor(sampled_density);
                     // blending
+                    src.rgb *= src.a;
                     accm_color = (1.0f - accm_color.a) * src + accm_color;
                     accm_ray += delta_step;
                     // early-ray-termination optimization technique

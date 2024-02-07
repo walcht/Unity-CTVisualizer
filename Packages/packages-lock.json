@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.cysharp.unitask": {
+      "version": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "809d23edae0df58fd0f61b4b6f67855c59d1b2fb"
+    },
     "com.judahperez.hsvcolorpicker": {
       "version": "3.3.0",
       "depth": 0,
@@ -182,6 +189,13 @@
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.unity.com"
+    },
+    "com.yasirkula.simplefilebrowser": {
+      "version": "1.6.4",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://package.openupm.com"
     },
     "com.unity.modules.ai": {
       "version": "1.0.0",

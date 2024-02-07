@@ -23,6 +23,17 @@ namespace UnityCTVisualizer
 
         bool m_DirtyFlag = true;
 
+        void Awake()
+        {
+            // default setup
+            AddColorControlPoint(new(0.0f, Color.white));
+            AddColorControlPoint(new(1.0f, Color.black));
+            AddAlphaControlPoint(new(0.0f, 0.0f));
+            AddAlphaControlPoint(new(0.5f, 0.0f));
+            AddAlphaControlPoint(new(0.6f, 0.7f));
+            AddAlphaControlPoint(new(1.0f, 1.0f));
+        }
+
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////// GETTERS //////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,6 +59,15 @@ namespace UnityCTVisualizer
             m_ColorControls[cpIndex].Position = newPos;
         }
 
+        /// <summary>
+        /// Add a new color control point from which color (without alpha) will be interpolated.
+        /// </summary>
+        /// <remark>
+        /// Even internally, it's preferable to use this function to add new control points rather than adding
+        /// them directly to the ColorControlPoints list.
+        /// </remark>
+        /// <param name="colorCP">color control point data to be added to the ColorControlPoints list</param>
+        /// <returns>index of newly added control point in the ColorControlPoints array</returns>
         public int AddColorControlPoint(ControlPoint<float, Color> colorCP)
         {
             colorCP.OnValueChange += () => m_DirtyFlag = true;

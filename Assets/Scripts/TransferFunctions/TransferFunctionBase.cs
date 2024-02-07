@@ -5,12 +5,6 @@ namespace UnityCTVisualizer
 {
     public delegate void VoidHandler();
 
-    public enum TransferFunction
-    {
-        TF1D,
-        // TF2D,
-    }
-
     [Serializable]
     public class ControlPoint<P, T>
     {

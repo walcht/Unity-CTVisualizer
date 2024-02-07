@@ -17,6 +17,12 @@ namespace UnityCTVisualizer
         public float[] Densities { get; set; }
     }
 
+    public interface IProgressHandler
+    {
+        float Progress { get; set; }
+        string Message { get; set; }
+    }
+
     public static class Importer
     {
         // from https://docs.unity3d.com/Manual/class-Texture3D.html
@@ -26,12 +32,28 @@ namespace UnityCTVisualizer
         const float SCALE_DEFAULT = -1f;
 
         /// <summary>
-        /// Importers a volumetric dataset from a Unity Volumetric DataSet (UVDS) binary file
+        /// Imports a volumetric dataset from a Unity Volumetric DataSet (UVDS) binary file
         /// </summary>
+        /// <remark>
+        /// To execute this asynchronously, wrap it in a Task.Run call and await the result.
+        /// </remark>
         /// <param name="datasetPath">absolute path to a UVDS binary file</param>
-        /// <param name="volumetricDataset"></param>
-        public static void ImportUVDS(string datasetPath, IUVDS volumetricDataset)
+        /// <param name="volumetricDataset">an initialized volumetric dataset whose public IUVDS properties
+        /// are going to be set by this importer</param>
+        /// <param name="progressHandler">a progress handler whose progress percentage and progress message
+        /// are going to be updated by this importer. Only pass this parameter when this importer is executed
+        /// asynchronously</param>
+        public static void ImportUVDS(
+            string datasetPath,
+            IUVDS volumetricDataset,
+            IProgressHandler progressHandler = null
+        )
         {
+            if (progressHandler != null)
+            {
+                progressHandler.Progress = 0.0f;
+                progressHandler.Message = "Importing UVDS dataset ...";
+            }
             using (var stream = File.Open(datasetPath, FileMode.Open))
             {
                 using (var reader = new BinaryReader(stream))
@@ -39,6 +61,11 @@ namespace UnityCTVisualizer
                     ushort imageWidth = reader.ReadUInt16();
                     ushort imageHeight = reader.ReadUInt16();
                     ushort nbrSlices = reader.ReadUInt16();
+                    float voxelWidth = reader.ReadSingle();
+                    float voxelHeight = reader.ReadSingle();
+                    float voxelDepth = reader.ReadSingle();
+                    float minDensity = Mathf.HalfToFloat(reader.ReadUInt16());
+                    float maxDensity = Mathf.HalfToFloat(reader.ReadUInt16());
                     if (
                         imageWidth == DIMENSION_DEFAULT
                         || imageHeight == DIMENSION_DEFAULT
@@ -58,9 +85,6 @@ namespace UnityCTVisualizer
                         );
                         return;
                     }
-                    float voxelWidth = reader.ReadSingle();
-                    float voxelHeight = reader.ReadSingle();
-                    float voxelDepth = reader.ReadSingle();
                     Vector3 scale = new(1, 1, 1);
                     if (
                         voxelWidth == SCALE_DEFAULT
@@ -81,19 +105,32 @@ namespace UnityCTVisualizer
                         scale.z = (voxelDepth / 1000.0f) * nbrSlices;
                     }
                     Vector3 eulerRotation = new(270.0f, 0.0f, 0.0f); // TODO: don't hard-code this
-                    int i = 0;
+                    int sliceIdx = 0;
+                    int pixelIdx = 0;
                     float[] densities = new float[dimension];
-                    for (; reader.BaseStream.Position != reader.BaseStream.Length; ++i)
+                    int sliceDim = imageWidth * imageHeight;
+                    for (; reader.BaseStream.Position != reader.BaseStream.Length; ++sliceIdx)
                     {
-                        densities[i] = Mathf.HalfToFloat(reader.ReadUInt16());
+                        if (progressHandler != null)
+                        {
+                            progressHandler.Progress = sliceIdx / (float)nbrSlices;
+                            progressHandler.Message = $"Importing slice number: {sliceIdx + 1}";
+                        }
+                        // this loop is here only for the progress handler
+                        for (pixelIdx = 0; pixelIdx < sliceDim; pixelIdx++)
+                        {
+                            densities[sliceIdx * sliceDim + pixelIdx] = Mathf.HalfToFloat(
+                                reader.ReadUInt16()
+                            );
+                        }
                     }
-                    if (i != dimension)
+                    if (((sliceIdx - 1) * sliceDim + pixelIdx) != dimension)
                     {
-                        Debug.LogError("Less elements in provided UVDS dataset than expected.");
+                        Debug.LogError(
+                            $"Less elements in provided UVDS dataset than expected. Read = {sliceIdx * sliceDim + pixelIdx}\t Expected: {dimension}."
+                        );
                         return;
                     }
-                    float minDensity = Mathf.HalfToFloat(reader.ReadUInt16());
-                    float maxDensity = Mathf.HalfToFloat(reader.ReadUInt16());
                     if (minDensity > maxDensity)
                     {
                         Debug.LogWarning(
