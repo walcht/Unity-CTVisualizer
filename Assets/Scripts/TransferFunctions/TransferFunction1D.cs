@@ -23,7 +23,7 @@ namespace UnityCTVisualizer
 
         bool m_DirtyFlag = true;
 
-        void Awake()
+        public void Init()
         {
             // default setup
             AddColorControlPoint(new(0.0f, Color.white));
@@ -120,6 +120,22 @@ namespace UnityCTVisualizer
 
         Texture2D m_ColorLookupTexture = null;
 
+        /// <summary>
+        /// Similar to TryUpdateColorLookupTexture. Except that it ignores the dirty flag and forces the
+        /// regeneration of the internal transfer function. Use this function sparingly.
+        /// </summary>
+        public void ForceUpdateColorLookupTexture()
+        {
+            GenerateColorLookupTextureInternal();
+            m_DirtyFlag = false;
+            TransferFunctionTexChange?.Invoke(m_ColorLookupTexture);
+        }
+
+        /// <summary>
+        /// Request an update for the internal transfer function. This checks a dirty flag then re-generates
+        /// the texture if necessary. Intended workflow is to subscribe to TransferFunctionTexChange event
+        /// to receive new color lookup textures and request textures updates by calling this function.
+        /// </summary>
         public void TryUpdateColorLookupTexture()
         {
             if (m_ColorLookupTexture == null || m_DirtyFlag)
@@ -207,10 +223,10 @@ namespace UnityCTVisualizer
                 var rightColorControl = sortedColorControls[leftColorControlIndex + 1];
                 var leftAlphaControl = sortedAlphaControls[leftAlphaControlIndex];
                 var rightAlphaControl = sortedAlphaControls[leftAlphaControlIndex + 1];
-                float normalizedDensityForColor =
+                float tColor =
                     (currentDensity - leftColorControl.Position)
                     / (rightColorControl.Position - leftColorControl.Position);
-                float normalizedDensityForAlpha =
+                float tAlpha =
                     (currentDensity - leftAlphaControl.Position)
                     / (rightAlphaControl.Position - leftAlphaControl.Position);
                 // normalizedDensityForColor = Mathf.SmoothStep(0.0f, 1.0f, normalizedDensityForColor);
@@ -219,13 +235,9 @@ namespace UnityCTVisualizer
                 Color pixelColor = Color.Lerp(
                     leftColorControl.Value,
                     rightColorControl.Value,
-                    normalizedDensityForColor
+                    tColor
                 );
-                pixelColor.a = Mathf.Lerp(
-                    leftAlphaControl.Value,
-                    rightAlphaControl.Value,
-                    normalizedDensityForAlpha
-                );
+                pixelColor.a = Mathf.Lerp(leftAlphaControl.Value, rightAlphaControl.Value, tAlpha);
                 pixelColorData[textureIndex] =
                     QualitySettings.activeColorSpace == ColorSpace.Linear
                         ? pixelColor.linear

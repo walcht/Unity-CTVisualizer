@@ -2,7 +2,7 @@ Shader "Unlit/HistogramShader"
 {
     Properties
     {
-        _FrequencyBins ("Texture", 2D) = "" {}
+        [NoScaleOffset] _FrequencyBins ("Texture", 2D) = "" {}
     }
     SubShader
     {

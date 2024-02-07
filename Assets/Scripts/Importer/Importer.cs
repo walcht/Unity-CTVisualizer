@@ -19,8 +19,8 @@ namespace UnityCTVisualizer
 
     public interface IProgressHandler
     {
-        float Progress { get; set; }
-        string Message { get; set; }
+        float Progress { set; }
+        string Message { set; }
     }
 
     public static class Importer

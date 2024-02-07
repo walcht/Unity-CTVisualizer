@@ -1,3 +1,4 @@
+#define DEBUG_UI
 using System;
 using TMPro;
 using UnityEngine;
@@ -22,6 +23,7 @@ namespace UnityCTVisualizer
         Slider m_AlphaCutoff;
 
         VolumetricDataset m_VolumetricDataset = null;
+        VolumetricObject m_VoumetricObject = null;
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////// CACHED COMPONENTS ////////////////////////////////////////
@@ -49,11 +51,13 @@ namespace UnityCTVisualizer
         /// Initializes the VolumetricDataset ScriptableObject this UI affects.
         /// Call this exactly after initializing this component.
         /// </summary>
-        /// <param name="volumetricDataset">Instance of VolumetricDataset ScriptableObject that this UI
-        /// communicates with</param>
-        public void Init(VolumetricDataset volumetricDataset)
+        /// <param name="volumetricDataset">Instance of VolumetricDataset ScriptableObject that this UI will affect its </param>
+        /// <param name="volumetricObject">The volumetric object that this UI will affect its rendering parameters</param>
+        public void Init(VolumetricDataset volumetricDataset, VolumetricObject volumetricObject)
         {
             m_VolumetricDataset = volumetricDataset;
+            m_VoumetricObject = volumetricObject;
+            m_AlphaCutoff.value = m_VoumetricObject.AlphaCutoff;
         }
 
         public void SetTFDropDown(TF tf)
@@ -99,6 +103,12 @@ namespace UnityCTVisualizer
             }
         }
 
-        void OnAlphaCutoffChange(float newVal) { }
+        void OnAlphaCutoffChange(float newVal)
+        {
+#if DEBUG_UI
+            Debug.Log($"Alpha cutoff change: {newVal}");
+#endif
+            m_VoumetricObject.AlphaCutoff = newVal;
+        }
     }
 }

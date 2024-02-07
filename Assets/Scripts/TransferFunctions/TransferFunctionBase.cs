@@ -43,6 +43,8 @@ namespace UnityCTVisualizer
 
     public interface ITransferFunction
     {
+        void Init();
+        void ForceUpdateColorLookupTexture();
         void TryUpdateColorLookupTexture();
         event Action<Texture2D> TransferFunctionTexChange;
     }

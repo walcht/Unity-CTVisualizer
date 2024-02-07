@@ -36,7 +36,7 @@ namespace UnityCTVisualizer
             OnTransferFunctionChange(m_DefaultTF);
             m_MetadataUI.gameObject.SetActive(true);
             m_MetadataUI.Init(volumetricDataset);
-            m_VisualizationParamsUI.Init(volumetricDataset);
+            m_VisualizationParamsUI.Init(volumetricDataset, m_VolumetricObject);
             m_VisualizationParamsUI.gameObject.SetActive(true);
         }
 
@@ -46,6 +46,7 @@ namespace UnityCTVisualizer
             {
                 case TF.TF1D:
                     var tfSO = ScriptableObject.CreateInstance<TransferFunction1D>();
+                    tfSO.Init();
                     // disable other TFUIs here
                     m_TransferFunction1DUI.Init(tfSO);
                     m_TransferFunction1DUI.gameObject.SetActive(true);

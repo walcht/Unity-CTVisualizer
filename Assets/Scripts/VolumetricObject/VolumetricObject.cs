@@ -4,20 +4,21 @@ namespace UnityCTVisualizer
 {
     public interface IVolumetricVisualizer
     {
-        VolumetricDataset VolumetricDataset { get; set; }
-        ITransferFunction TransferFunction { get; set; }
+        VolumetricDataset VolumetricDataset { set; }
+        ITransferFunction TransferFunction { set; }
+        float AlphaCutoff { get; set; }
     }
 
     [RequireComponent(typeof(MeshRenderer)), RequireComponent(typeof(MeshFilter))]
-    public class VolumetricObject : MonoBehaviour
+    public class VolumetricObject : MonoBehaviour, IVolumetricVisualizer
     {
         int SHADER_DENSITIES_TEX_ID = Shader.PropertyToID("_Densities");
         int SHADER_TFTEX_ID = Shader.PropertyToID("_TFColors");
+        int SHADER_ALPHA_CUTOFF_ID = Shader.PropertyToID("_AlphaCutoff");
 
         VolumetricDataset m_VolumeDataset = null;
         public VolumetricDataset VolumetricDataset
         {
-            private get => m_VolumeDataset;
             set
             {
                 if (m_VolumeDataset != null) { } // TODO: do we need a cleanup here?
@@ -26,6 +27,8 @@ namespace UnityCTVisualizer
                     SHADER_DENSITIES_TEX_ID,
                     m_VolumeDataset.DensitiesSamplerTexture
                 );
+                // scale mesh to match correct dimensions of the original volumetric data
+                this.GetComponent<Transform>().localScale = m_VolumeDataset.Scale;
             }
         }
         ITransferFunction m_TransferFunction = null;
@@ -36,7 +39,6 @@ namespace UnityCTVisualizer
         /// </summary>
         public ITransferFunction TransferFunction
         {
-            private get => m_TransferFunction;
             set
             {
                 if (value != m_TransferFunction)
@@ -45,8 +47,22 @@ namespace UnityCTVisualizer
                         m_TransferFunction.TransferFunctionTexChange -= OnTransferFunctionTexChange;
                     m_TransferFunction = value;
                     m_TransferFunction.TransferFunctionTexChange += OnTransferFunctionTexChange;
-                    m_TransferFunction.TryUpdateColorLookupTexture();
+                    m_TransferFunction.ForceUpdateColorLookupTexture();
                 }
+            }
+        }
+
+        float m_AlphaCutoff = 0.95f;
+        public float AlphaCutoff
+        {
+            get => m_AlphaCutoff;
+            set
+            {
+                m_AlphaCutoff = Mathf.Clamp01(value);
+                m_AttachedMeshRenderer.sharedMaterial.SetFloat(
+                    SHADER_ALPHA_CUTOFF_ID,
+                    m_AlphaCutoff
+                );
             }
         }
 

@@ -27,6 +27,9 @@ namespace UnityCTVisualizer
         RawImage m_GradientColorImage;
 
         [SerializeField]
+        Button m_RemoveColor;
+
+        [SerializeField]
         Button m_ClearColors;
 
         [SerializeField]
@@ -51,13 +54,6 @@ namespace UnityCTVisualizer
         public GameObject m_ColorControlPointUIPrefab;
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////////// MISC ///////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        public Vector3 m_RelativeColorPickerPos;
-        public Quaternion m_RelativeColorPickerRot;
-
-        /////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////// CACHED COMPONENTS ////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -78,6 +74,7 @@ namespace UnityCTVisualizer
 
         void Awake()
         {
+            m_RemoveColor.onClick.AddListener(OnRemoveColorControlPoint);
             m_ClearColors.onClick.AddListener(OnClearColorsClick);
             m_ColorPicker.OnClick += OnColorPickerClick;
             m_ColorPickerWrapper.gameObject.SetActive(false);
@@ -133,25 +130,18 @@ namespace UnityCTVisualizer
             m_ColorControlPoints.Add(newCp);
         }
 
-        void RemoveControlPoint(int cpID)
-        {
-            var cpToRemove = m_ColorControlPoints[cpID];
-            cpToRemove.ControlPointSelected -= OnControlPointSelect;
-            cpToRemove.ControlPointData.OnValueChange -= OnControlPointDataChange;
-            m_ColorControlPoints.RemoveAt(cpID);
-            m_TransferFunctionData.ClearColorControlPoint(cpID);
-        }
-
         void UpdateCurrControlPointID(int newId)
         {
             if (newId < 0 || newId >= m_ColorControlPoints.Count)
             {
                 m_CurrControlPointID = -1;
+                m_RemoveColor.interactable = false;
                 m_ColorPicker.SetInteractiveness(false);
                 return;
             }
             m_CurrControlPointID = newId;
             m_ColorPicker.SetColor(m_ColorControlPoints[newId].ControlPointData.Value);
+            m_RemoveColor.interactable = true;
             m_ColorPicker.SetInteractiveness(true);
         }
 
@@ -179,13 +169,35 @@ namespace UnityCTVisualizer
         ///////////////////////////////////////////// LISTENERS /////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+        void OnRemoveColorControlPoint()
+        {
+            if (m_CurrControlPointID == -1)
+            {
+                Debug.LogError(
+                    "No control point is currently selected. This remove handler should not have been active!"
+                );
+                return;
+            }
+            var cpToRemove = m_ColorControlPoints[m_CurrControlPointID];
+            // remove it from color control points UI list
+            m_ColorControlPoints.RemoveAt(m_CurrControlPointID);
+            // destroy UI element (no need to unsubscribe)
+            Destroy(cpToRemove.gameObject);
+            // remove from underlying Transfer function data
+            m_TransferFunctionData.ClearColorControlPoint(m_CurrControlPointID);
+            // no control point is selected
+            UpdateCurrControlPointID(-1);
+            // request and update for TF
+            m_TransferFunctionData.TryUpdateColorLookupTexture();
+        }
+
         void OnClearColorsClick()
         {
             m_TransferFunctionData.ClearColorControlPoints();
             foreach (var item in m_ColorControlPoints)
             {
                 item.gameObject.SetActive(false);
-                Destroy(item);
+                Destroy(item.gameObject);
             }
             m_ColorControlPoints.Clear();
 #if DEBUG_UI
@@ -204,27 +216,28 @@ namespace UnityCTVisualizer
                 return;
             }
             m_ColorPickerWrapper.ColorPickerDone += OnColorPickerDoneClick;
-
-            m_ColorPickerTransform.position = m_TF1DCanvasTransform.TransformPoint(
-                m_RelativeColorPickerPos
-            );
-            m_ColorPickerTransform.rotation =
-                m_TF1DCanvasTransform.rotation * m_RelativeColorPickerRot;
             // don't forget to set the ColorPicker's initial color
             m_ColorPickerWrapper.Init(
                 m_ColorControlPoints[m_CurrControlPointID].ControlPointData.Value
             );
+            // activate whole color picker Canvas UI
             m_ColorPickerWrapper.gameObject.SetActive(true);
+            // TODO: disable TransferFunction1DUI interactiveness
         }
 
         void OnColorPickerDoneClick(Color finalColor)
         {
             m_ColorPickerWrapper.ColorPickerDone -= OnColorPickerDoneClick;
-
+            // update currently selected color control point UI's color. This will automatically update
+            // underlying transfer function data
             m_ColorControlPoints[m_CurrControlPointID].SetColor(finalColor);
+            // set the UI color for the color picker button
             m_ColorPicker.SetColor(finalColor);
-
+            // disable whole color picker Canvas UI
             m_ColorPickerWrapper.gameObject.SetActive(false);
+            // TODO: enable TransferFunction1DUI interactiveness
+            // don't forget to request a TF texture update
+            m_TransferFunctionData.TryUpdateColorLookupTexture();
         }
 
         void OnControlPointSelect(int cpID)

@@ -2,9 +2,9 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
 {
     Properties
 	{
-	    [NoScaleOffset] _Densities ("Densities", 3D) = "" {}
+	    [NoScaleOffset] _Densities("Densities", 3D) = "" {}
         [NoScaleOffset] _TFColors("Transfer Function Colors Texture", 2D) = "" {}
-		_AlphaCutoff ("Opacity Cutoff", Range(0.0, 1.0)) = 0.94
+		_AlphaCutoff("Opacity Cutoff", Range(0.0, 1.0)) = 0.95
 	}
 
 	SubShader {
@@ -22,7 +22,7 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
 
             #define MAX_ITERATIONS 256
             #define BOUNDING_BOX_LONGEST_SEGMENT 1.732050808f  // diagonal of a cube
-            #define STEP_SIZE 0.003382912f  // = (LONGEST_SEGMET / MAX_ITERATIONS)
+            #define STEP_SIZE 0.006765823f  // = (LONGEST_SEGMET / MAX_ITERATIONS)
             
             sampler3D _Densities;
             sampler2D _TFColors;
@@ -51,6 +51,10 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
             ///     intersection algorithm. For an in-depth explanation, visit:
             ///     https://tavianator.com/2022/ray_box_boundary.html
             /// </summary>
+            /// <remark>
+            ///     This version may result in artifacts around the corners of
+            ///     the AABB.
+            /// </remark>
             void slabs(Ray r, Box b, out float t_in, out float t_out) {
                 float3 inverseDir = 1.0f / r.dir;
                 float3 t0 = (b.min - r.origin) * inverseDir;
@@ -66,7 +70,17 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
             ///     color and alpha.
             /// </summary>
             float4 sampleTF1DColor(float density) {
-                return tex2D(_TFColors, float4(density, 0.0f, 0.0f, 0.0f));
+                return tex2Dlod(_TFColors, float4(density, 0.0f, 0.0f, 0.0f));
+            }
+
+            float3 getRayDirection(float3 objectSpaceVertex) {
+                if (unity_OrthoParams.w > 0) {
+                    // means orthogonal camera mode. Here every ray has the same direction
+                    float3 cameraWorldDir = mul((float3x3)unity_CameraToWorld, float3(0.0f, 0.0f, 1.0f));
+                    return normalize(mul(unity_WorldToObject, cameraWorldDir));
+                }
+                // means perspective
+                return normalize(-ObjSpaceViewDir(float4(objectSpaceVertex, 0.0f)));
             }
             
             struct v2f
@@ -74,7 +88,6 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                 float4 clipVertex : SV_POSITION;
                 float2 uv: TEXCOORD0;
                 float3 modelVertex : TEXCOORD1;
-                float3 worldVertex: TEXCOORD2;
             };
             
             /// <summary>
@@ -88,10 +101,6 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                 output.clipVertex = UnityObjectToClipPos(modelVertex);
                 output.uv = uv;
                 output.modelVertex = modelVertex.xyz;
-                output.worldVertex = mul(unity_ObjectToWorld, modelVertex).xyz;
-                // TODO:  verify this interpolation
-                //        (or don't do it for the moment, optimize later?)
-                // output.modelDir = -ObjSpaceViewDir(modelVertex);
                 return output;
             }
             
@@ -100,8 +109,7 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                 // initialize a ray in model space
                 Ray ray;
                 ray.origin = interpolated.modelVertex;
-                float3 dir = interpolated.worldVertex - _WorldSpaceCameraPos;
-                ray.dir = normalize(mul(unity_WorldToObject, float4(dir, 1.0f))).xyz;
+                ray.dir = getRayDirection(interpolated.modelVertex);
                 // TODO:    this is a uniform! Maybe don't do it in the fragment
                 //          shader?
                 // initialize the axis-aligned bounding box (AABB)
@@ -112,20 +120,21 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                 float t_in;
                 float t_out;
                 slabs(ray, aabb, t_in, t_out);
-            
+                // in case we're inside the volume, t_in might be negative
+                t_in = max(0.0f, t_in);
                 float3 start = ray.origin;
-                float3 end = ray.origin + ray.dir * t_out;
                 // distance of segment intersecting with AABB volume
                 // TODO: do we need abs here?
                 float seg_len = abs(t_out - t_in);
                 int num_iterations = (int)clamp(seg_len / STEP_SIZE, 1, MAX_ITERATIONS);
-                float3 delta_step = normalize(end - start) * STEP_SIZE;
+                float3 delta_step = ray.dir * STEP_SIZE;
                 float4 accm_color = float4(0.0f, 0.0f, 0.0f, 0.0f);
                 float3 accm_ray = start;
                 // TODO:    improve sampling loop (maybe use unroll with outside check?)
                 for (int iter = 0; iter < num_iterations; iter++)
                 {
-                    float sampled_density = tex3D(_Densities, float4(accm_ray, 0.0f)).r;
+                    // don't forget to transition from [-0.5, 0.5] range to [0.0, 1.0]
+                    float sampled_density = tex3Dlod(_Densities, float4(accm_ray + 0.5f, 0.0f)).r;
                     // apply transfer function
                     float4 src = sampleTF1DColor(sampled_density);
                     // blending
