@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -11,6 +12,8 @@ namespace UnityCTVisualizer
     )]
     public class VolumetricDataset : ScriptableObject, IUVDS
     {
+        public event Action<Texture2D> OnDensitiesFreqChange;
+
         [SerializeField]
         string m_DatasetPath;
         public string DatasetPath
@@ -88,7 +91,12 @@ namespace UnityCTVisualizer
         public float[] Densities
         {
             get => m_Densities;
-            set { m_Densities = value; }
+            set
+            {
+                m_Densities = value;
+                m_DirtyFlagDensities = true;
+                m_DirtyFlagFrequencies = true;
+            }
         }
 
         [SerializeField]
@@ -100,6 +108,8 @@ namespace UnityCTVisualizer
             {
                 m_ClampMaxDensity = value;
                 m_MaxDensity = Mathf.Min(m_MaxDensity, m_ClampMaxDensity);
+                m_DirtyFlagDensities = true;
+                m_DirtyFlagFrequencies = true;
             }
         }
 
@@ -112,6 +122,8 @@ namespace UnityCTVisualizer
             {
                 m_ClampMinDensity = value;
                 m_MinDensity = Mathf.Max(m_MinDensity, m_ClampMinDensity);
+                m_DirtyFlagDensities = true;
+                m_DirtyFlagFrequencies = true;
             }
         }
 
@@ -141,42 +153,102 @@ namespace UnityCTVisualizer
             private set { m_DensitiesGradientSampler = value; }
         }
 
-        public const int HISTOGRAM_BINS = 1024;
+        public const int HISTOGRAM_BINS = 512;
+        Texture2D m_DensitiesFrequenciesTex = null;
 
         public bool IsVolumeGenerated()
         {
             return m_DensitiesSampler != null;
         }
 
+        // if true it means the densities frequencies texture has to be re-generated when it is requested
+        private bool m_DirtyFlagFrequencies = true;
+
+        // if true it means the densities sample texture has to be re-generated when it is requested
+        private bool m_DirtyFlagDensities = true;
+
+        /// <summary>
+        /// Request an update for the internal density frequencies texture. This checks a dirty flag then
+        /// re-generates the texture if necessary. Intended workflow is to subscribe to
+        /// OnDensitiesFreqChange event to receive new the density frequencies texture and request textures
+        /// updates by calling this function.
+        /// </summary>
+        public void TryUpdateDensityFreqTexture()
+        {
+            if (m_DensitiesFrequenciesTex == null || m_DirtyFlagFrequencies)
+            {
+                GenerateDensitiesFreqTex();
+                m_DirtyFlagFrequencies = false;
+                OnDensitiesFreqChange?.Invoke(m_DensitiesFrequenciesTex);
+                return;
+            }
+        }
+
         /// <summary>
         /// Divides density range (after optional clamping) into HISTOGRAM_BINS bins.
         /// </summary>
-        /// <returns>Array of frequencies that has the size: HISTOGRAM_BINS</returns>
-        public float[] GenerateBinFrequencies()
+        private void GenerateDensitiesFreqTex()
         {
             if (Densities == null)
             {
                 Debug.LogError("Densities have to be initialized before calling this function.");
-                return null;
+                return;
             }
-            int[] frequencies = new int[HISTOGRAM_BINS];
+            if (m_DensitiesFrequenciesTex == null)
+            {
+                m_DensitiesFrequenciesTex = new Texture2D(
+                    HISTOGRAM_BINS,
+                    1,
+                    SystemInfo.SupportsTextureFormat(TextureFormat.RHalf)
+                        ? TextureFormat.RHalf
+                        : TextureFormat.RFloat,
+                    false
+                );
+                m_DensitiesFrequenciesTex.wrapMode = TextureWrapMode.Clamp;
+            }
             float BIN_WIDTH = (m_MaxDensity - m_MinDensity) / HISTOGRAM_BINS;
+            int[] frequencies = new int[HISTOGRAM_BINS];
             for (int i = 0; i < Densities.Length; ++i)
             {
-                int freqIdx = (int)
-                    Mathf.Floor(
-                        Mathf.Clamp(Densities[i], m_ClampMinDensity, m_ClampMaxDensity) / BIN_WIDTH
-                    );
-                ++frequencies[freqIdx];
+                int freqIdx = (int)Mathf.Floor((Densities[i] - m_MinDensity) / BIN_WIDTH);
+                // happend when Densities[freqIdx] == MaxDensity
+                if (freqIdx == HISTOGRAM_BINS)
+                    --freqIdx;
+                try
+                {
+                    ++frequencies[freqIdx];
+                }
+                catch (System.Exception)
+                {
+                    Debug.Log($"Bin width: {BIN_WIDTH}");
+                    Debug.Log($"Max Density: {m_MaxDensity}, Min Density: {m_MinDensity}");
+                    Debug.Log(freqIdx);
+                    throw;
+                }
             }
-            float[] normalizedFrequencies = new float[HISTOGRAM_BINS];
             int freqMin = frequencies.Min();
             float range = (float)(frequencies.Max() - freqMin);
-            for (int j = 0; j < HISTOGRAM_BINS; ++j)
+            if (SystemInfo.SupportsTextureFormat(TextureFormat.RHalf))
             {
-                normalizedFrequencies[j] = (frequencies[j] - freqMin) / range;
+                ushort[] normalizedFrequencies = new ushort[HISTOGRAM_BINS];
+                for (int j = 0; j < HISTOGRAM_BINS; ++j)
+                {
+                    normalizedFrequencies[j] = Mathf.FloatToHalf(
+                        (frequencies[j] - freqMin) / range
+                    );
+                }
+                m_DensitiesFrequenciesTex.SetPixelData(normalizedFrequencies, 0);
             }
-            return normalizedFrequencies;
+            else
+            {
+                float[] normalizedFrequencies = new float[HISTOGRAM_BINS];
+                for (int j = 0; j < HISTOGRAM_BINS; ++j)
+                {
+                    normalizedFrequencies[j] = (frequencies[j] - freqMin) / range;
+                }
+                m_DensitiesFrequenciesTex.SetPixelData(normalizedFrequencies, 0);
+            }
+            m_DensitiesFrequenciesTex.Apply();
         }
 
         /// <summary>
@@ -193,6 +265,9 @@ namespace UnityCTVisualizer
             }
             if (SystemInfo.SupportsTextureFormat(TextureFormat.RHalf))
             {
+#if DEBUG
+                Debug.Log("Supported TextureFormat is: RHalf (16 bit float)");
+#endif
                 m_DensitiesSampler = new Texture3D(
                     ImageWidth,
                     ImageHeight,
@@ -214,6 +289,9 @@ namespace UnityCTVisualizer
             }
             else
             {
+#if DEBUG
+                Debug.Log("Supported TextureFormat is: RFloat (32 bit float)");
+#endif
                 m_DensitiesSampler = new Texture3D(
                     ImageWidth,
                     ImageHeight,
@@ -234,6 +312,7 @@ namespace UnityCTVisualizer
             }
             m_DensitiesSampler.wrapMode = TextureWrapMode.Clamp;
             m_DensitiesSampler.Apply();
+            m_DirtyFlagDensities = false;
         }
 
         /// <summary>

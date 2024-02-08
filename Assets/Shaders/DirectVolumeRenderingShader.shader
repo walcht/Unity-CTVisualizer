@@ -20,9 +20,9 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
 			#pragma fragment frag
             #include "UnityCG.cginc"
 
-            #define MAX_ITERATIONS 256
+            #define MAX_ITERATIONS 512
             #define BOUNDING_BOX_LONGEST_SEGMENT 1.732050808f  // diagonal of a cube
-            #define STEP_SIZE 0.006765823f  // = (LONGEST_SEGMET / MAX_ITERATIONS)
+            #define STEP_SIZE 0.003382912f  // = (LONGEST_SEGMET / MAX_ITERATIONS)
             
             sampler3D _Densities;
             sampler2D _TFColors;

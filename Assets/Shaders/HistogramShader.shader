@@ -1,12 +1,14 @@
-Shader "Unlit/HistogramShader"
+Shader "UnityCTVisualizer/HistogramShader"
 {
     Properties
     {
-        [NoScaleOffset] _FrequencyBins ("Texture", 2D) = "" {}
+        [NoScaleOffset] _MainTex ("Densities frequency 1D-ish texture", 2D) = "green" {}
+        _BinColor("Bins color", Color) = (1.0, 1.0, 1.0, 1.0)
+        _BackgroundColor("Background color", Color) = (0.0, 0.0, 0.0, 1.0)
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "Queue"="Geometry" "RenderType"="Opaque" }
         ZWrite Off
         LOD 100
 
@@ -17,37 +19,31 @@ Shader "Unlit/HistogramShader"
             #pragma fragment frag
             #include "UnityCG.cginc"
 
-            struct appdata
-            {
-                float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
-            };
+            
+            sampler2D _MainTex;
+            float4 _BinColor;
+            float4 _BackgroundColor;
 
             struct v2f
             {
                 float2 uv : TEXCOORD0;
-                UNITY_FOG_COORDS(1)
                 float4 vertex : SV_POSITION;
             };
 
-            sampler2D _MainTex;
-            float4 _MainTex_ST;
-
-            v2f vert (appdata v)
+            v2f vert (float4 vertex : POSITION, float2 uv : TEXCOORD0)
             {
                 v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                UNITY_TRANSFER_FOG(o,o.vertex);
+                o.vertex = UnityObjectToClipPos(vertex);
+                o.uv = uv;
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target
             {
-                // sample the texture
-                fixed4 col = tex2D(_MainTex, i.uv);
-                // apply fog
-                UNITY_APPLY_FOG(i.fogCoord, col);
+                // sample the frequency for current density
+                float freq = tex2Dlod(_MainTex, float4(i.uv.x, 0.0f, 0.0f, 0.0f));
+                float t = step(freq, i.uv.y);
+                float4 col = t * _BackgroundColor + (1 - t) * _BinColor;
                 return col;
             }
             ENDCG

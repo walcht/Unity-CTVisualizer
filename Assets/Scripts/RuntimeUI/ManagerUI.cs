@@ -19,6 +19,7 @@ namespace UnityCTVisualizer
         public TF m_DefaultTF;
 
         VolumetricObject m_VolumetricObject = null;
+        VolumetricDataset m_VolumetricDataset = null;
 
         void Awake()
         {
@@ -29,6 +30,7 @@ namespace UnityCTVisualizer
 
         void OnDatasetLoad(VolumetricDataset volumetricDataset)
         {
+            m_VolumetricDataset = volumetricDataset;
             m_VolumetricObject = Instantiate<GameObject>(m_VolumetricObjectPrefab)
                 .GetComponent<VolumetricObject>();
             m_VolumetricObject.VolumetricDataset = volumetricDataset;
@@ -48,7 +50,7 @@ namespace UnityCTVisualizer
                     var tfSO = ScriptableObject.CreateInstance<TransferFunction1D>();
                     tfSO.Init();
                     // disable other TFUIs here
-                    m_TransferFunction1DUI.Init(tfSO);
+                    m_TransferFunction1DUI.Init(tfSO, m_VolumetricDataset);
                     m_TransferFunction1DUI.gameObject.SetActive(true);
                     m_VolumetricObject.TransferFunction = tfSO;
                     break;

@@ -13,7 +13,7 @@ namespace UnityCTVisualizer
         /// color!)
         /// </summary>
         [Range(0.0f, 1.0f)]
-        public float m_ColorDefaultAlpha;
+        public float m_ColorDefaultAlpha = 1.0f;
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////// IN-CURRENT or IN-CHILDREN REFERENCES //////////////////////////////

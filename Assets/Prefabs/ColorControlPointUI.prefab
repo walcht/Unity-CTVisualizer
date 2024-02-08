@@ -148,7 +148,7 @@ GameObject:
   - component: {fileID: 6382492466175273119}
   - component: {fileID: 7270499558394197508}
   m_Layer: 5
-  m_Name: ColorControlPoint
+  m_Name: ColorControlPointUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

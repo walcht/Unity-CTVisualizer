@@ -4,6 +4,12 @@ using UnityEngine;
 
 namespace UnityCTVisualizer
 {
+    public static class TFConstants
+    {
+        public const int MAX_COLOR_CONTROL_POINTS = 16;
+        public const int MAX_ALPHA_CONTROL_POINTS = 16;
+    }
+
     [CreateAssetMenu(
         fileName = "transfer_function_1d",
         menuName = "UnityCTVisualizer/TransferFunction1D"
@@ -40,8 +46,13 @@ namespace UnityCTVisualizer
 
         public int GetColorControlsCount() => m_ColorControls.Count;
 
+        public int GetAlphaControlsCount() => m_AlphaControls.Count;
+
         public ControlPoint<float, Color> GetColorControlPointAt(int cpIndex) =>
             m_ColorControls[cpIndex];
+
+        public ControlPoint<float, float> GetAlphaControlPointAt(int cpIndex) =>
+            m_AlphaControls[cpIndex];
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////// MODIFIERS /////////////////////////////////////////////
