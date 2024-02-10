@@ -1,5 +1,5 @@
+#define DEBUG_UI
 using System;
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -109,9 +109,6 @@ namespace UnityCTVisualizer
 
         public void OnSelect(BaseEventData eventData)
         {
-#if DEBUG_UI
-            Debug.Log($"Alpha control point selected: {m_ID}");
-#endif
             ControlPointSelected?.Invoke(m_ID);
         }
 

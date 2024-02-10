@@ -1,4 +1,5 @@
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using UnityEngine;
 
@@ -31,6 +32,108 @@ namespace UnityCTVisualizer
         const ushort DIMENSION_DEFAULT = 65535;
         const float SCALE_DEFAULT = -1f;
 
+        private static void ImportUVDSInternal(
+            BinaryReader reader,
+            string datasetPath,
+            IUVDS volumetricDataset,
+            IProgressHandler progressHandler = null
+        )
+        {
+            ushort imageWidth = reader.ReadUInt16();
+            ushort imageHeight = reader.ReadUInt16();
+            ushort nbrSlices = reader.ReadUInt16();
+            float voxelWidth = reader.ReadSingle();
+            float voxelHeight = reader.ReadSingle();
+            float voxelDepth = reader.ReadSingle();
+            float eulerRotX = reader.ReadSingle();
+            float eulerRotY = reader.ReadSingle();
+            float eulerRotZ = reader.ReadSingle();
+            float minDensity = Mathf.HalfToFloat(reader.ReadUInt16());
+            float maxDensity = Mathf.HalfToFloat(reader.ReadUInt16());
+            if (
+                imageWidth == DIMENSION_DEFAULT
+                || imageHeight == DIMENSION_DEFAULT
+                || nbrSlices == DIMENSION_DEFAULT
+            )
+            {
+                Debug.LogError(
+                    $"Provided dataset has invalid default value(s) for its dimensions. Aborting ..."
+                );
+                return;
+            }
+            int dimension = imageWidth * imageHeight * nbrSlices;
+            if (Mathf.Max(imageWidth, imageHeight, nbrSlices) > MAX_TEXTURE3D_DIM)
+            {
+                Debug.LogError(
+                    $"Exceeding maximum Texture3D dimension: {MAX_TEXTURE3D_DIM}. Aborting ..."
+                );
+                return;
+            }
+            Vector3 scale = new(1, 1, 1);
+            if (
+                voxelWidth == SCALE_DEFAULT
+                || voxelHeight == SCALE_DEFAULT
+                || voxelDepth == SCALE_DEFAULT
+            )
+            {
+                Debug.LogWarning(
+                    "Voxel dimension has invalid default value(s)."
+                        + "Default scale (1, 1, 1) is used for the volume. The dimensions of the "
+                        + "volume no longer reflect its dimensions in reality!"
+                );
+            }
+            else
+            {
+                scale.x = (voxelWidth / 1000.0f) * imageWidth; // mm to meters
+                scale.y = (voxelHeight / 1000.0f) * imageHeight;
+                scale.z = (voxelDepth / 1000.0f) * nbrSlices;
+            }
+            int sliceIdx = 0;
+            int pixelIdx = 0;
+            float[] densities = new float[dimension];
+            int sliceDim = imageWidth * imageHeight;
+            for (; reader.BaseStream.Position != reader.BaseStream.Length; ++sliceIdx)
+            {
+                if (progressHandler != null)
+                {
+                    progressHandler.Progress = sliceIdx / (float)nbrSlices;
+                    progressHandler.Message = $"Importing slice number: {sliceIdx + 1}";
+                }
+                // this loop is here only for the progress handler
+                for (pixelIdx = 0; pixelIdx < sliceDim; pixelIdx++)
+                {
+                    densities[sliceIdx * sliceDim + pixelIdx] = Mathf.HalfToFloat(
+                        reader.ReadUInt16()
+                    );
+                }
+            }
+            if (((sliceIdx - 1) * sliceDim + pixelIdx) != dimension)
+            {
+                Debug.LogError(
+                    "Less elements in provided UVDS dataset than expected."
+                        + $" Read = {sliceIdx * sliceDim + pixelIdx}\t Expected: {dimension}."
+                );
+                return;
+            }
+            if (minDensity > maxDensity)
+            {
+                Debug.LogWarning(
+                    "Densities maximum and input values have invalid defaults. Recalculating ..."
+                );
+                minDensity = densities.Min();
+                maxDensity = densities.Max();
+            }
+            volumetricDataset.DatasetPath = datasetPath;
+            volumetricDataset.ImageWidth = imageWidth;
+            volumetricDataset.ImageHeight = imageHeight;
+            volumetricDataset.NbrSlices = nbrSlices;
+            volumetricDataset.Scale = scale;
+            volumetricDataset.EulerRotation = new Vector3(eulerRotX, eulerRotY, eulerRotZ);
+            volumetricDataset.MinDensity = minDensity;
+            volumetricDataset.MaxDensity = maxDensity;
+            volumetricDataset.Densities = densities;
+        }
+
         /// <summary>
         /// Imports a volumetric dataset from a Unity Volumetric DataSet (UVDS) binary file
         /// </summary>
@@ -54,100 +157,42 @@ namespace UnityCTVisualizer
                 progressHandler.Progress = 0.0f;
                 progressHandler.Message = "Importing UVDS dataset ...";
             }
+            // TODO: Add proper exception handling
             using (var stream = File.Open(datasetPath, FileMode.Open))
             {
-                using (var reader = new BinaryReader(stream))
+                if (datasetPath.EndsWith(".zip"))
                 {
-                    ushort imageWidth = reader.ReadUInt16();
-                    ushort imageHeight = reader.ReadUInt16();
-                    ushort nbrSlices = reader.ReadUInt16();
-                    float voxelWidth = reader.ReadSingle();
-                    float voxelHeight = reader.ReadSingle();
-                    float voxelDepth = reader.ReadSingle();
-                    float minDensity = Mathf.HalfToFloat(reader.ReadUInt16());
-                    float maxDensity = Mathf.HalfToFloat(reader.ReadUInt16());
-                    if (
-                        imageWidth == DIMENSION_DEFAULT
-                        || imageHeight == DIMENSION_DEFAULT
-                        || nbrSlices == DIMENSION_DEFAULT
+                    using (
+                        var reader = new ZipArchive(stream, ZipArchiveMode.Read).Entries[0].Open()
                     )
                     {
-                        Debug.LogError(
-                            $"Provided dataset has invalid default value(s) for its dimensions. Aborting ..."
-                        );
-                        return;
-                    }
-                    int dimension = imageWidth * imageHeight * nbrSlices;
-                    if (Mathf.Max(imageWidth, imageHeight, nbrSlices) > MAX_TEXTURE3D_DIM)
-                    {
-                        Debug.LogError(
-                            $"Exceeding maximum Texture3D dimension: {MAX_TEXTURE3D_DIM}. Aborting ..."
-                        );
-                        return;
-                    }
-                    Vector3 scale = new(1, 1, 1);
-                    if (
-                        voxelWidth == SCALE_DEFAULT
-                        || voxelHeight == SCALE_DEFAULT
-                        || voxelDepth == SCALE_DEFAULT
-                    )
-                    {
-                        Debug.LogWarning(
-                            "Voxel dimension has invalid default value(s)."
-                                + "Default scale (1, 1, 1) is used for the volume. The dimensions of the "
-                                + "volume no longer reflect its dimensions in reality!"
-                        );
-                    }
-                    else
-                    {
-                        scale.x = (voxelWidth / 1000.0f) * imageWidth; // mm to meters
-                        scale.y = (voxelHeight / 1000.0f) * imageHeight;
-                        scale.z = (voxelDepth / 1000.0f) * nbrSlices;
-                    }
-                    Vector3 eulerRotation = new(270.0f, 0.0f, 0.0f); // TODO: don't hard-code this
-                    int sliceIdx = 0;
-                    int pixelIdx = 0;
-                    float[] densities = new float[dimension];
-                    int sliceDim = imageWidth * imageHeight;
-                    for (; reader.BaseStream.Position != reader.BaseStream.Length; ++sliceIdx)
-                    {
-                        if (progressHandler != null)
+                        using (var ms = new MemoryStream())
                         {
-                            progressHandler.Progress = sliceIdx / (float)nbrSlices;
-                            progressHandler.Message = $"Importing slice number: {sliceIdx + 1}";
-                        }
-                        // this loop is here only for the progress handler
-                        for (pixelIdx = 0; pixelIdx < sliceDim; pixelIdx++)
-                        {
-                            densities[sliceIdx * sliceDim + pixelIdx] = Mathf.HalfToFloat(
-                                reader.ReadUInt16()
-                            );
+                            reader.CopyTo(ms);
+                            ms.Seek(0, SeekOrigin.Begin);
+                            using (var binaryReader = new BinaryReader(ms))
+                            {
+                                ImportUVDSInternal(
+                                    binaryReader,
+                                    datasetPath,
+                                    volumetricDataset,
+                                    progressHandler
+                                );
+                            }
                         }
                     }
-                    if (((sliceIdx - 1) * sliceDim + pixelIdx) != dimension)
+                }
+                else
+                {
+                    using (var binaryReader = new BinaryReader(stream))
                     {
-                        Debug.LogError(
-                            $"Less elements in provided UVDS dataset than expected. Read = {sliceIdx * sliceDim + pixelIdx}\t Expected: {dimension}."
+                        ImportUVDSInternal(
+                            binaryReader,
+                            datasetPath,
+                            volumetricDataset,
+                            progressHandler
                         );
-                        return;
                     }
-                    if (minDensity > maxDensity)
-                    {
-                        Debug.LogWarning(
-                            "Densities maximum and input values have invalid defaults. Recalculating ..."
-                        );
-                        minDensity = densities.Min();
-                        maxDensity = densities.Max();
-                    }
-                    volumetricDataset.DatasetPath = datasetPath;
-                    volumetricDataset.ImageWidth = imageWidth;
-                    volumetricDataset.ImageHeight = imageHeight;
-                    volumetricDataset.NbrSlices = nbrSlices;
-                    volumetricDataset.Scale = scale;
-                    volumetricDataset.EulerRotation = eulerRotation;
-                    volumetricDataset.MinDensity = minDensity;
-                    volumetricDataset.MaxDensity = maxDensity;
-                    volumetricDataset.Densities = densities;
                 }
             }
         }

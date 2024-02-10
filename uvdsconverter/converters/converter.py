@@ -21,6 +21,9 @@ class UVDS:
     voxeldimX: np.float32 = np.float32(-1)  # optional
     voxeldimY: np.float32 = np.float32(-1)  # optional
     voxeldimZ: np.float32 = np.float32(-1)  # optional
+    eulerrotX: np.float32 = np.float32(0)  # optional
+    eulerrotY: np.float32 = np.float32(0)  # optional
+    eulerrotZ: np.float32 = np.float32(0)  # optional
     minDensity: np.float16 = np.finfo(np.float16).max  # optional
     maxDensity: np.float16 = np.finfo(np.float16).min  # optional
     densities: NDArray[np.float16] = np.array([], dtype=np.float16)  # crucial
@@ -39,6 +42,9 @@ class UVDS:
         uvds_stream.write(self.voxeldimX.tobytes())
         uvds_stream.write(self.voxeldimY.tobytes())
         uvds_stream.write(self.voxeldimZ.tobytes())
+        uvds_stream.write(self.eulerrotX.tobytes())
+        uvds_stream.write(self.eulerrotY.tobytes())
+        uvds_stream.write(self.eulerrotZ.tobytes())
         uvds_stream.write(self.minDensity.tobytes())
         uvds_stream.write(self.maxDensity.tobytes())
         uvds_stream.write(self.densities.tobytes())
@@ -101,6 +107,9 @@ class UVDS:
             voxeldimX=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
             voxeldimY=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
             voxeldimZ=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
+            eulerrotX=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
+            eulerrotY=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
+            eulerrotZ=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
             minDensity=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
             maxDensity=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
             densities=np.frombuffer(uvds_stream.read(), dtype=np.float32)[0],

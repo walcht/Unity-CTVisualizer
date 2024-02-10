@@ -29,7 +29,10 @@ namespace UnityCTVisualizer
         {
             // make sure that initially the progress handler is disabled
             m_ProgressHandler.gameObject.SetActive(false);
-            FileBrowser.SetFilters(true, new FileBrowser.Filter("UnityVolumetricDataSet", ".uvds"));
+            FileBrowser.SetFilters(
+                true,
+                new FileBrowser.Filter("UnityVolumetricDataSet", ".uvds", ".uvds.zip")
+            );
             FileBrowser.SetDefaultFilter(".uvds");
             m_FileDialog.onClick.AddListener(() => ShowLoadDialogCoroutine());
         }

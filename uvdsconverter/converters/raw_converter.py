@@ -30,12 +30,15 @@ class RawConverter(BaseConverter):
                 "uint32": np.uint32,
                 "int32": np.int32,
             }
-            width = click.prompt("Enter width", type=int)
-            height = click.prompt("Enter height", type=int)
-            depth = click.prompt("Enter depth", type=int)
-            voxeldimX = click.prompt("Enter voxel dimension x", type=float)
-            voxeldimY = click.prompt("Enter voxel dimension y", type=float)
-            voxeldimZ = click.prompt("Enter voxel dimension z", type=float)
+            width = click.prompt("Enter width: ", type=int)
+            height = click.prompt("Enter height: ", type=int)
+            depth = click.prompt("Enter depth: ", type=int)
+            voxeldimX = click.prompt("Enter voxel dimension x: ", type=float, default=1.0)
+            voxeldimY = click.prompt("Enter voxel dimension y: ", type=float, default=1.0)
+            voxeldimZ = click.prompt("Enter voxel dimension z: ", type=float, default=1.0)
+            eulerrotX = click.prompt("Enter Euler rotation around X axis: ", type=float, default=0.0)
+            eulerrotY = click.prompt("Enter Euler rotation around Y axis: ", type=float, default=0.0)
+            eulerrotZ = click.prompt("Enter Euler rotation around Z axis: ", type=float, default=0.0)
             endianness = click.prompt(
                 "Enter endianness (Little-endian - L, Big-endian - B)",
                 type=click.Choice(endianness_options),
@@ -71,6 +74,9 @@ class RawConverter(BaseConverter):
                 voxeldimX=np.float32(voxeldimX),
                 voxeldimY=np.float32(voxeldimY),
                 voxeldimZ=np.float32(voxeldimZ),
+                eulerrotX=np.float32(eulerrotX),
+                eulerrotY=np.float32(eulerrotY),
+                eulerrotZ=np.float32(eulerrotZ),
                 minDensity=minDensity,
                 maxDensity=maxDensity,
                 densities=raw_data,
@@ -91,7 +97,7 @@ class RawConverter(BaseConverter):
         bool
             True if this raw dataset converter is suitable. False otherwise
         """
-        return os.path.isfile(dataset_dir_or_fp) and os.path.splitext(dataset_dir_or_fp)[-1].lower() == ".raw"
+        return os.path.isfile(dataset_dir_or_fp) and dataset_dir_or_fp.endswith(".raw")
 
 
 if __name__ == "__main__":
