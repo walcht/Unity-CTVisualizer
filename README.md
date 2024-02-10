@@ -23,7 +23,7 @@ UnityCT-Visualizer is actually made of two *sub-applications*:
 CT datasets with supported formats are converted using a Python script into a .uvds
 format; a very minimal format that we defined and that our C# Unity importer expects.
 
-![workflow](https://github.com/walcht/Unity-Immersive-Analytics/assets/89390465/b603309f-642f-4978-b999-57a27ebb7e6a)
+![importer](https://github.com/walcht/Unity-CTVisualizer/assets/148270400/cbd2edd8-bde7-4b07-83cd-8f1adbc187d2)
 
 We decided to use Python for parsing CT (or MRI) dataset formats and converting
 them to **UVDS** because:
