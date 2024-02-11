@@ -211,6 +211,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b016cec022ee05ee3ab4c427d1c4eb53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &1464084654 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8522628104189577190, guid: dd49ca4c069decbbb8762a06847eacae, type: 3}
+  m_PrefabInstance: {fileID: 2304993152883081382}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1464084659
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1464084654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fba4a30790bdaa7eeb16aac6417fe25e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1716247840
 GameObject:
   m_ObjectHideFlags: 0
@@ -1082,6 +1099,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 619967399}
     - target: {fileID: 3485617540641277127, guid: dd49ca4c069decbbb8762a06847eacae, type: 3}
+      propertyPath: m_GradientColorUI
+      value: 
+      objectReference: {fileID: 1464084659}
+    - target: {fileID: 3485617540641277127, guid: dd49ca4c069decbbb8762a06847eacae, type: 3}
       propertyPath: m_ColorPickerWrapper
       value: 
       objectReference: {fileID: 5563192242247530792}
@@ -1268,6 +1289,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3647600316793225312, guid: dd49ca4c069decbbb8762a06847eacae, type: 3}
       insertIndex: -1
       addedObject: {fileID: 619967399}
+    - targetCorrespondingSourceObject: {fileID: 8522628104189577190, guid: dd49ca4c069decbbb8762a06847eacae, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1464084659}
   m_SourcePrefab: {fileID: 100100000, guid: dd49ca4c069decbbb8762a06847eacae, type: 3}
 --- !u!1001 &4437392004638056997
 PrefabInstance:

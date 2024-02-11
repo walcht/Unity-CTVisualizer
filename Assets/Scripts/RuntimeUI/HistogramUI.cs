@@ -36,10 +36,6 @@ namespace UnityCTVisualizer
                     / m_RectTransform.rect.height;
                 OnAddAlphaControlPoint?.Invoke(rectLocalPos);
             }
-            else if (eventData.button == PointerEventData.InputButton.Left)
-            {
-                Debug.Log("Left click you SOB!");
-            }
         }
     }
 }

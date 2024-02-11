@@ -33,6 +33,9 @@ namespace UnityCTVisualizer
         RawImage m_GradientColorImage;
 
         [SerializeField]
+        ColorGradientRangeUI m_GradientColorUI;
+
+        [SerializeField]
         Button m_RemoveAlpha;
 
         [SerializeField]
@@ -106,6 +109,7 @@ namespace UnityCTVisualizer
             m_ClearAlphas.onClick.AddListener(OnClearAlphasClick);
             m_ColorPicker.OnClick += OnColorPickerClick;
             m_HistogramUI.OnAddAlphaControlPoint += OnAddAlphaControlPoint;
+            m_GradientColorUI.OnAddColorControlPoint += OnAddColorControlPoint;
             m_ColorPickerWrapper.gameObject.SetActive(false);
         }
 
