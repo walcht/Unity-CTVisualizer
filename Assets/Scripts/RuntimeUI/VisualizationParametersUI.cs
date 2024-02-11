@@ -6,9 +6,17 @@ using UnityEngine.UI;
 
 namespace UnityCTVisualizer
 {
+    public enum INTERPOLATION
+    {
+        NEAREST_NEIGHBOR = 0,
+        TRICUBIC_PRE_CLASSIFICATION,
+        // TRICUBIC_POST_CLASSIFICATION,
+    }
+
     public class VisualizationParametersUI : MonoBehaviour
     {
         public event Action<TF> OnTransferFunctionChange;
+        public event Action<INTERPOLATION> OnInterpolationChange;
 
         [SerializeField]
         TMP_Dropdown m_TFDropDown;
@@ -22,6 +30,9 @@ namespace UnityCTVisualizer
         [SerializeField]
         Slider m_AlphaCutoff;
 
+        [SerializeField]
+        TMP_Dropdown m_InterpolationDropDown;
+
         VolumetricDataset m_VolumetricDataset = null;
         VolumetricObject m_VoumetricObject = null;
 
@@ -31,6 +42,7 @@ namespace UnityCTVisualizer
 
         // previously selected transfer function
         int m_PrevTFIndex = -1;
+        int m_PrevInterIndex = -1;
 
         void Awake()
         {
@@ -40,6 +52,14 @@ namespace UnityCTVisualizer
                 m_TFDropDown.options.Add(new TMP_Dropdown.OptionData(enumName));
             }
             m_TFDropDown.onValueChanged.AddListener(OnTFDropDownChange);
+            m_InterpolationDropDown.options.Clear();
+            foreach (string enumName in Enum.GetNames(typeof(INTERPOLATION)))
+            {
+                m_InterpolationDropDown.options.Add(
+                    new TMP_Dropdown.OptionData(enumName.Replace("_", " ").ToLower())
+                );
+            }
+            m_InterpolationDropDown.onValueChanged.AddListener(OnInterDropDownChange);
             m_AlphaCutoff.onValueChanged.AddListener(OnAlphaCutoffChange);
         }
 
@@ -68,6 +88,15 @@ namespace UnityCTVisualizer
             {
                 OnTransferFunctionChange?.Invoke((TF)tfIndex);
                 m_PrevTFIndex = tfIndex;
+            }
+        }
+
+        void OnInterDropDownChange(int interIndex)
+        {
+            if (interIndex != m_PrevInterIndex)
+            {
+                m_PrevInterIndex = interIndex;
+                OnInterpolationChange?.Invoke((INTERPOLATION)interIndex);
             }
         }
 

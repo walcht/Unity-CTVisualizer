@@ -51,8 +51,8 @@ class DicomConverter(BaseConverter):
                 voxeldimX=np.float32(files[0].PixelSpacing[0]),
                 voxeldimY=np.float32(files[0].PixelSpacing[1]),
                 voxeldimZ=np.float32(voxel_depth),
-                eulerrotX=np.float32(0),
-                eulerrotY=np.float32(0),
+                eulerrotX=np.float32(270),  # based on some dicom dataset samples
+                eulerrotY=np.float32(180),
                 eulerrotZ=np.float32(0),
                 minDensity=minDensity,
                 maxDensity=maxDensity,

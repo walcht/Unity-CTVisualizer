@@ -16,7 +16,8 @@ namespace UnityCTVisualizer
         public VisualizationParametersUI m_VisualizationParamsUI;
         public TransferFunction1DUI m_TransferFunction1DUI;
 
-        public TF m_DefaultTF;
+        public TF m_DefaultTF = TF.TF1D;
+        public INTERPOLATION m_DefaultInterpolation = INTERPOLATION.NEAREST_NEIGHBOR;
 
         VolumetricObject m_VolumetricObject = null;
         VolumetricDataset m_VolumetricDataset = null;
@@ -26,6 +27,7 @@ namespace UnityCTVisualizer
             m_ImporterUI.gameObject.SetActive(true);
             m_ImporterUI.OnDatasetLoad += OnDatasetLoad;
             m_VisualizationParamsUI.OnTransferFunctionChange += OnTransferFunctionChange;
+            m_VisualizationParamsUI.OnInterpolationChange += OnInterpolationChange;
         }
 
         void OnDatasetLoad(VolumetricDataset volumetricDataset)
@@ -34,8 +36,11 @@ namespace UnityCTVisualizer
             m_VolumetricObject = Instantiate<GameObject>(m_VolumetricObjectPrefab)
                 .GetComponent<VolumetricObject>();
             m_VolumetricObject.VolumetricDataset = volumetricDataset;
+            // TODO: add the defaults in VisualizationParametersUI's Init method
             // create default transfer function ScriptableObject
             OnTransferFunctionChange(m_DefaultTF);
+            // set default interpolation method
+            OnInterpolationChange(m_DefaultInterpolation);
             m_MetadataUI.gameObject.SetActive(true);
             m_MetadataUI.Init(volumetricDataset);
             m_VisualizationParamsUI.Init(volumetricDataset, m_VolumetricObject);
@@ -59,6 +64,11 @@ namespace UnityCTVisualizer
                     Debug.LogError($"Transfer function: {newTF} is not yet supported");
                     break;
             }
+        }
+
+        void OnInterpolationChange(INTERPOLATION newInter)
+        {
+            m_VolumetricObject.InterpolationMethod = newInter;
         }
     }
 }

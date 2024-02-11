@@ -1,3 +1,4 @@
+#define DEBUG
 using UnityEngine;
 
 namespace UnityCTVisualizer
@@ -18,6 +19,7 @@ namespace UnityCTVisualizer
         int SHADER_DENSITIES_TEX_ID = Shader.PropertyToID("_Densities");
         int SHADER_TFTEX_ID = Shader.PropertyToID("_TFColors");
         int SHADER_ALPHA_CUTOFF_ID = Shader.PropertyToID("_AlphaCutoff");
+        int SHADER_DENSITIES_TEX_SIZE_ID = Shader.PropertyToID("_DensitiesTexSize");
 
         VolumetricDataset m_VolumeDataset = null;
         public VolumetricDataset VolumetricDataset
@@ -34,6 +36,10 @@ namespace UnityCTVisualizer
                 m_VolumeDataset.TryGenerateDensitiesTexture();
                 // scale mesh to match correct dimensions of the original volumetric data
                 this.GetComponent<Transform>().localScale = m_VolumeDataset.Scale;
+                // rotate mesh according to provided rotation
+                this.GetComponent<Transform>().localRotation = Quaternion.Euler(
+                    m_VolumeDataset.EulerRotation
+                );
             }
         }
         ITransferFunction m_TransferFunction = null;
@@ -71,6 +77,38 @@ namespace UnityCTVisualizer
             }
         }
 
+        INTERPOLATION m_InterpolationMethod;
+        public INTERPOLATION InterpolationMethod
+        {
+            // https://docs.unity3d.com/ScriptReference/Shader-keywordSpace.html
+            set
+            {
+                m_InterpolationMethod = value;
+                switch (m_InterpolationMethod)
+                {
+                    case INTERPOLATION.NEAREST_NEIGHBOR:
+                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword(
+                            "TRICUBIC_PRE_CLASSIFICATION"
+                        );
+                        m_AttachedMeshRenderer.sharedMaterial.EnableKeyword("NEAREST_NEIGHBOR");
+                        break;
+
+                    case INTERPOLATION.TRICUBIC_PRE_CLASSIFICATION:
+                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword("NEAREST_NEIGHBOR");
+                        m_AttachedMeshRenderer.sharedMaterial.EnableKeyword(
+                            "TRICUBIC_PRE_CLASSIFICATION"
+                        );
+                        break;
+
+                    default:
+                        break;
+                }
+#if DEBUG
+                Debug.Log($"New interpolation method: {m_InterpolationMethod}");
+#endif
+            }
+        }
+
         void OnDisable()
         {
             if (m_VolumeDataset != null)
@@ -86,6 +124,15 @@ namespace UnityCTVisualizer
 
         void OnDenstitiesTexChange(Texture3D newDensitiesTex)
         {
+            m_AttachedMeshRenderer.sharedMaterial.SetVector(
+                SHADER_DENSITIES_TEX_SIZE_ID,
+                new Vector4(
+                    newDensitiesTex.width,
+                    newDensitiesTex.height,
+                    newDensitiesTex.depth,
+                    0.0f
+                )
+            );
             m_AttachedMeshRenderer.sharedMaterial.SetTexture(
                 SHADER_DENSITIES_TEX_ID,
                 newDensitiesTex
