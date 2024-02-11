@@ -12,6 +12,9 @@ namespace UnityCTVisualizer
     [RequireComponent(typeof(MeshRenderer)), RequireComponent(typeof(MeshFilter))]
     public class VolumetricObject : MonoBehaviour, IVolumetricVisualizer
     {
+        [SerializeField]
+        MeshRenderer m_AttachedMeshRenderer;
+
         int SHADER_DENSITIES_TEX_ID = Shader.PropertyToID("_Densities");
         int SHADER_TFTEX_ID = Shader.PropertyToID("_TFColors");
         int SHADER_ALPHA_CUTOFF_ID = Shader.PropertyToID("_AlphaCutoff");
@@ -21,12 +24,14 @@ namespace UnityCTVisualizer
         {
             set
             {
-                if (m_VolumeDataset != null) { } // TODO: do we need a cleanup here?
+                if (m_VolumeDataset != null)
+                {
+                    m_VolumeDataset.OnDensitiesChange -= OnDenstitiesTexChange;
+                } // TODO: do we need a cleanup here?
                 m_VolumeDataset = value;
-                m_AttachedMeshRenderer.sharedMaterial.SetTexture(
-                    SHADER_DENSITIES_TEX_ID,
-                    m_VolumeDataset.DensitiesSamplerTexture
-                );
+                m_VolumeDataset.OnDensitiesChange += OnDenstitiesTexChange;
+                // request densities 3D texture generation
+                m_VolumeDataset.TryGenerateDensitiesTexture();
                 // scale mesh to match correct dimensions of the original volumetric data
                 this.GetComponent<Transform>().localScale = m_VolumeDataset.Scale;
             }
@@ -52,7 +57,7 @@ namespace UnityCTVisualizer
             }
         }
 
-        float m_AlphaCutoff = 0.95f;
+        float m_AlphaCutoff = (254.0f) / 255.0f;
         public float AlphaCutoff
         {
             get => m_AlphaCutoff;
@@ -66,16 +71,25 @@ namespace UnityCTVisualizer
             }
         }
 
-        MeshRenderer m_AttachedMeshRenderer;
-
-        void Awake()
+        void OnDisable()
         {
-            m_AttachedMeshRenderer = gameObject.GetComponent<MeshRenderer>();
+            if (m_VolumeDataset != null)
+                m_VolumeDataset.OnDensitiesChange -= OnDenstitiesTexChange;
+            if (m_TransferFunction != null)
+                m_TransferFunction.TransferFunctionTexChange -= OnTransferFunctionTexChange;
         }
 
         void OnTransferFunctionTexChange(Texture2D newTex)
         {
             m_AttachedMeshRenderer.sharedMaterial.SetTexture(SHADER_TFTEX_ID, newTex);
+        }
+
+        void OnDenstitiesTexChange(Texture3D newDensitiesTex)
+        {
+            m_AttachedMeshRenderer.sharedMaterial.SetTexture(
+                SHADER_DENSITIES_TEX_ID,
+                newDensitiesTex
+            );
         }
     }
 }

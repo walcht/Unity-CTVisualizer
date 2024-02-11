@@ -65,14 +65,14 @@ namespace UnityCTVisualizer
         ////////////////////////////////////////////// GETTERS //////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        public IEnumerable<ControlPoint<float, Color>> ColorControlPoints()
+        public IEnumerable<int> ColorControlPointIDs()
         {
-            return m_ColorControls.Values;
+            return m_ColorControls.Keys;
         }
 
-        public IEnumerable<ControlPoint<float, float>> AlphaControlPoints()
+        public IEnumerable<int> AlphaControlPointIDs()
         {
-            return m_AlphaControls.Values;
+            return m_AlphaControls.Keys;
         }
 
         /// <summary>

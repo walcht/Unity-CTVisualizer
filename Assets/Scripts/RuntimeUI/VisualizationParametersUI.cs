@@ -40,10 +40,6 @@ namespace UnityCTVisualizer
                 m_TFDropDown.options.Add(new TMP_Dropdown.OptionData(enumName));
             }
             m_TFDropDown.onValueChanged.AddListener(OnTFDropDownChange);
-            m_ClampMin.OnInputFieldSubmit += OnClampMinSubmit;
-            m_ClampMin.OnToggleChange += OnClampMinToggle;
-            m_ClampMax.OnInputFieldSubmit += OnClampMaxSubmit;
-            m_ClampMax.OnToggleChange += OnClampMaxToggle;
             m_AlphaCutoff.onValueChanged.AddListener(OnAlphaCutoffChange);
         }
 
@@ -72,34 +68,6 @@ namespace UnityCTVisualizer
             {
                 OnTransferFunctionChange?.Invoke((TF)tfIndex);
                 m_PrevTFIndex = tfIndex;
-            }
-        }
-
-        void OnClampMinSubmit(float clampMin)
-        {
-            m_VolumetricDataset.ClampMinDensity = clampMin;
-        }
-
-        void OnClampMaxSubmit(float clampMax)
-        {
-            m_VolumetricDataset.ClampMaxDensity = clampMax;
-        }
-
-        void OnClampMinToggle(bool val)
-        {
-            if (!val)
-            {
-                m_VolumetricDataset.ClampMinDensity = Single.NegativeInfinity;
-                return;
-            }
-        }
-
-        void OnClampMaxToggle(bool val)
-        {
-            if (!val)
-            {
-                m_VolumetricDataset.ClampMaxDensity = Single.PositiveInfinity;
-                return;
             }
         }
 

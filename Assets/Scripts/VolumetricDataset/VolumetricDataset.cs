@@ -13,6 +13,7 @@ namespace UnityCTVisualizer
     public class VolumetricDataset : ScriptableObject, IUVDS
     {
         public event Action<Texture2D> OnDensitiesFreqChange;
+        public event Action<Texture3D> OnDensitiesChange;
 
         [SerializeField]
         string m_DatasetPath;
@@ -67,11 +68,7 @@ namespace UnityCTVisualizer
         public float MinDensity
         {
             get => m_MinDensity;
-            set
-            {
-                m_MinDensity = value;
-                m_MinDensity = Mathf.Max(m_MinDensity, m_ClampMinDensity);
-            }
+            set { m_MinDensity = value; }
         }
 
         [SerializeField]
@@ -79,11 +76,7 @@ namespace UnityCTVisualizer
         public float MaxDensity
         {
             get => m_MaxDensity;
-            set
-            {
-                m_MaxDensity = value;
-                m_MaxDensity = Mathf.Min(m_MaxDensity, m_ClampMaxDensity);
-            }
+            set { m_MaxDensity = value; }
         }
 
         [SerializeField]
@@ -99,46 +92,7 @@ namespace UnityCTVisualizer
             }
         }
 
-        [SerializeField]
-        float m_ClampMaxDensity = float.PositiveInfinity;
-        public float ClampMaxDensity
-        {
-            get => m_ClampMaxDensity;
-            set
-            {
-                m_ClampMaxDensity = value;
-                m_MaxDensity = Mathf.Min(m_MaxDensity, m_ClampMaxDensity);
-                m_DirtyFlagDensities = true;
-                m_DirtyFlagFrequencies = true;
-            }
-        }
-
-        [SerializeField]
-        float m_ClampMinDensity = float.NegativeInfinity;
-        public float ClampMinDensity
-        {
-            get => m_ClampMinDensity;
-            set
-            {
-                m_ClampMinDensity = value;
-                m_MinDensity = Mathf.Max(m_MinDensity, m_ClampMinDensity);
-                m_DirtyFlagDensities = true;
-                m_DirtyFlagFrequencies = true;
-            }
-        }
-
-        [SerializeField]
         Texture3D m_DensitiesSampler = null;
-        public Texture3D DensitiesSamplerTexture
-        {
-            get
-            {
-                if (m_DensitiesSampler == null)
-                    GenerateDensitiesTexture();
-                return m_DensitiesSampler;
-            }
-            private set { m_DensitiesSampler = value; }
-        }
 
         [SerializeField]
         Texture3D m_DensitiesGradientSampler = null;
@@ -178,8 +132,6 @@ namespace UnityCTVisualizer
             if (m_DensitiesFrequenciesTex == null || m_DirtyFlagFrequencies)
             {
                 GenerateDensitiesFreqTex();
-                m_DirtyFlagFrequencies = false;
-                OnDensitiesFreqChange?.Invoke(m_DensitiesFrequenciesTex);
                 return;
             }
         }
@@ -249,12 +201,28 @@ namespace UnityCTVisualizer
                 m_DensitiesFrequenciesTex.SetPixelData(normalizedFrequencies, 0);
             }
             m_DensitiesFrequenciesTex.Apply();
+            m_DirtyFlagFrequencies = false;
+            OnDensitiesFreqChange?.Invoke(m_DensitiesFrequenciesTex);
+        }
+
+        /// <summary>
+        /// Request an update for the internal densities 3D texture. This checks a dirty flag then
+        /// re-generates the texture if necessary. Intended workflow is to subscribe to
+        /// OnDensitiesChange event to receive the new densities texture and request texture
+        /// updates by calling this function.
+        /// </summary>
+        public void TryGenerateDensitiesTexture()
+        {
+            if (m_DensitiesSampler == null || m_DirtyFlagDensities)
+            {
+                GenerateDensitiesTexture();
+            }
         }
 
         /// <summary>
         /// Generates volume densities (Texture3D) according to volume generation settings
         /// </summary>
-        public void GenerateDensitiesTexture()
+        private void GenerateDensitiesTexture()
         {
             if (Densities == null)
             {
@@ -279,10 +247,7 @@ namespace UnityCTVisualizer
                 for (int i = 0; i < Densities.Length; ++i)
                 {
                     pixelData[i] = Mathf.FloatToHalf(
-                        (
-                            Mathf.Clamp(Densities[i], m_ClampMinDensity, m_ClampMaxDensity)
-                            - m_MinDensity
-                        ) / (m_MaxDensity - m_MinDensity)
+                        (Densities[i] - m_MinDensity) / (m_MaxDensity - m_MinDensity)
                     );
                 }
                 m_DensitiesSampler.SetPixelData(pixelData, 0);
@@ -302,17 +267,14 @@ namespace UnityCTVisualizer
                 float[] pixelData = new float[Densities.Length];
                 for (int i = 0; i < Densities.Length; ++i)
                 {
-                    pixelData[i] =
-                        (
-                            Mathf.Clamp(Densities[i], m_ClampMinDensity, m_ClampMaxDensity)
-                            - m_MinDensity
-                        ) / (m_MaxDensity - m_MinDensity);
+                    pixelData[i] = (Densities[i] - m_MinDensity) / (m_MaxDensity - m_MinDensity);
                 }
                 m_DensitiesSampler.SetPixelData(pixelData, 0);
             }
             m_DensitiesSampler.wrapMode = TextureWrapMode.Clamp;
             m_DensitiesSampler.Apply();
             m_DirtyFlagDensities = false;
+            OnDensitiesChange?.Invoke(m_DensitiesSampler);
         }
 
         /// <summary>
@@ -322,7 +284,7 @@ namespace UnityCTVisualizer
         {
             if (m_DensitiesSampler == null)
             {
-                this.GenerateDensitiesTexture();
+                TryGenerateDensitiesTexture();
             }
             if (exportPath == null)
             {

@@ -1,3 +1,4 @@
+#define DEBUG_UI
 using System;
 using TMPro;
 using UnityEngine;
@@ -6,19 +7,26 @@ using UnityEngine.UI;
 
 namespace UnityCTVisualizer
 {
-    [RequireComponent(typeof(RectTransform), typeof(Button))]
+    [RequireComponent(typeof(RectTransform))]
     public class ColorControlPointUI
         : MonoBehaviour,
             IDragHandler,
             IBeginDragHandler,
             IPointerClickHandler,
-            ISelectHandler
+            ISelectHandler,
+            IDeselectHandler
     {
         /// <summary>
         /// Invoked when this color control point is selected. The ID assigned to this control point is
         /// passed.
         /// </summary>
         public event Action<int> ControlPointSelected;
+
+        /// <summary>
+        /// Invoked when this color control point is deselected. The ID assigned to this control point is
+        /// passed.
+        /// </summary>
+        public event Action<int> ControlPointDeselected;
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////// IN-CURRENT or IN-CHILDREN REFERENCES //////////////////////////////
@@ -42,8 +50,8 @@ namespace UnityCTVisualizer
 
         const float DEFAULT_ARROW_ALPHA = 0.75f;
         Vector3 m_PositionVect = new(0, 0, 0);
-        Vector2 m_AnchorMin = new(0, 0.5f);
-        Vector2 m_AnchorMax = new(0, 0.5f);
+        Vector2 m_AnchorMin = new(0, 0.0f);
+        Vector2 m_AnchorMax = new(0, 1.0f);
         int m_ID;
         ControlPoint<float, Color> m_ControlPoint;
         public ControlPoint<float, Color> ControlPointData
@@ -102,9 +110,6 @@ namespace UnityCTVisualizer
             col.a = DEFAULT_ARROW_ALPHA;
             m_ControlPoint.Value = col;
             m_Image.color = m_ControlPoint.Value;
-#if DEBUG_UI
-            Debug.Log($"Color changed to: {m_Image.color}");
-#endif
             return;
         }
 
@@ -133,6 +138,11 @@ namespace UnityCTVisualizer
             Debug.Log($"Color control point selected: {m_ID}");
 #endif
             ControlPointSelected?.Invoke(m_ID);
+        }
+
+        public void OnDeselect(BaseEventData eventData)
+        {
+            ControlPointDeselected?.Invoke(m_ID);
         }
     }
 }

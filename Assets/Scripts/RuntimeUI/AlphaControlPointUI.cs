@@ -12,13 +12,20 @@ namespace UnityCTVisualizer
             IDragHandler,
             IBeginDragHandler,
             IPointerClickHandler,
-            ISelectHandler
+            ISelectHandler,
+            IDeselectHandler
     {
         /// <summary>
-        /// Invoked when this color control point is selected. The ID assigned to this control point is
+        /// Invoked when this alpha control point is selected. The ID assigned to this control point is
         /// passed.
         /// </summary>
         public event Action<int> ControlPointSelected;
+
+        /// <summary>
+        /// Invoked when this alpha control point is deselected. The ID assigned to this control point is
+        /// passed.
+        /// </summary>
+        public event Action<int> ControlPointDeselected;
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////// IN-CURRENT or IN-CHILDREN REFERENCES //////////////////////////////
@@ -112,6 +119,9 @@ namespace UnityCTVisualizer
             ControlPointSelected?.Invoke(m_ID);
         }
 
-        public void OnDeselect(BaseEventData eventData) { }
+        public void OnDeselect(BaseEventData eventData)
+        {
+            ControlPointDeselected?.Invoke(m_ID);
+        }
     }
 }
