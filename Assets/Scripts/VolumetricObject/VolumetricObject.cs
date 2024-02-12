@@ -90,13 +90,29 @@ namespace UnityCTVisualizer
                         m_AttachedMeshRenderer.sharedMaterial.DisableKeyword(
                             "TRICUBIC_PRE_CLASSIFICATION"
                         );
+                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword(
+                            "TRICUBIC_POST_CLASSIFICATION"
+                        );
                         m_AttachedMeshRenderer.sharedMaterial.EnableKeyword("NEAREST_NEIGHBOR");
                         break;
 
                     case INTERPOLATION.TRICUBIC_PRE_CLASSIFICATION:
                         m_AttachedMeshRenderer.sharedMaterial.DisableKeyword("NEAREST_NEIGHBOR");
+                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword(
+                            "TRICUBIC_POST_CLASSIFICATION"
+                        );
                         m_AttachedMeshRenderer.sharedMaterial.EnableKeyword(
                             "TRICUBIC_PRE_CLASSIFICATION"
+                        );
+                        break;
+
+                    case INTERPOLATION.TRICUBIC_POST_CLASSIFICATION:
+                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword("NEAREST_NEIGHBOR");
+                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword(
+                            "TRICUBIC_PRE_CLASSIFICATION"
+                        );
+                        m_AttachedMeshRenderer.sharedMaterial.EnableKeyword(
+                            "TRICUBIC_POST_CLASSIFICATION"
                         );
                         break;
 

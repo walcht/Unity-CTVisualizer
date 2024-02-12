@@ -17,7 +17,7 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
 		Pass
 		{
 		    CGPROGRAM
-            #pragma multi_compile NEAREST_NEIGHBOR TRICUBIC_PRE_CLASSIFICATION 
+            #pragma multi_compile NEAREST_NEIGHBOR TRICUBIC_PRE_CLASSIFICATION TRICUBIC_POST_CLASSIFICATION
 			#pragma vertex vert
 			#pragma fragment frag
             #include "UnityCG.cginc"
@@ -38,6 +38,14 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                 float3 origin;
                 float3 dir;
             };
+
+            /// <summary>
+            ///     Samples the one dimensional transfer function texture for
+            ///     color and alpha.
+            /// </summary>
+            float4 sampleTF1DColor(float density) {
+                return tex2Dlod(_TFColors, float4(density, 0.0f, 0.0f, 0.0f));
+            }
 
             ////
             /// Copyright (c) 2008-2009, Danny Ruijters. All rights reserved.
@@ -82,7 +90,7 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
             ///    Journal of Graphics Tools, vol. 13, no. 4, pp. 61-69, 2008.
             ///
             // TODO: re-implement this. Understand it and make it faster (if possible)
-            float4 interpolateTricubicFast(sampler3D tex, float3 texCoord, float3 texSize)
+            float4 interpolateTricubic(sampler3D tex, float3 texCoord, float3 texSize)
             {
             	// shift the coordinate from [0,1] to [-0.5, texSize-0.5]
             	float3 coord_grid = texCoord * texSize - 0.5;
@@ -120,6 +128,45 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
             
             	return lerp(tex001, tex000, g0.z);  //weigh along the z-direction
             }
+
+            float4 interpolateTricubicColor(sampler3D tex, float3 texCoord, float3 texSize)
+            {
+            	// shift the coordinate from [0,1] to [-0.5, texSize-0.5]
+            	float3 coord_grid = texCoord * texSize - 0.5;
+            	float3 index = floor(coord_grid);
+            	float3 fraction = coord_grid - index;
+            	float3 one_frac = 1.0 - fraction;
+            
+            	float3 w0 = 1.0/6.0 * one_frac*one_frac*one_frac;
+            	float3 w1 = 2.0/3.0 - 0.5 * fraction*fraction*(2.0-fraction);
+            	float3 w2 = 2.0/3.0 - 0.5 * one_frac*one_frac*(2.0-one_frac);
+            	float3 w3 = 1.0/6.0 * fraction*fraction*fraction;
+            
+            	float3 g0 = w0 + w1;
+            	float3 g1 = w2 + w3;
+            	float3 mult = 1.0 / texSize;
+            	float3 h0 = mult * ((w1 / g0) - 0.5 + index);  //h0 = w1/g0 - 1, move from [-0.5, texSize-0.5] to [0,1]
+            	float3 h1 = mult * ((w3 / g1) + 1.5 + index);  //h1 = w3/g1 + 1, move from [-0.5, texSize-0.5] to [0,1]
+            
+            	// fetch the eight linear interpolations
+            	// weighting and fetching is interleaved for performance and stability reasons
+            	float4 col000 = sampleTF1DColor(tex3Dlod(tex, float4(h0, 0.0)));
+            	float4 col100 = sampleTF1DColor(tex3Dlod(tex, float4(h1.x, h0.y, h0.z, 0.0)));
+            	col000 = lerp(col100, col000, g0.x);  //weigh along the x-direction
+            	float4 col010 = sampleTF1DColor(tex3Dlod(tex, float4(h0.x, h1.y, h0.z, 0.0)));
+            	float4 col110 = sampleTF1DColor(tex3Dlod(tex, float4(h1.x, h1.y, h0.z, 0.0)));
+            	col010 = lerp(col110, col010, g0.x);  //weigh along the x-direction
+            	col000 = lerp(col010, col000, g0.y);  //weigh along the y-direction
+            	float4 col001 = sampleTF1DColor(tex3Dlod(tex, float4(h0.x, h0.y, h1.z, 0.0)));
+            	float4 col101 = sampleTF1DColor(tex3Dlod(tex, float4(h1.x, h0.y, h1.z, 0.0)));
+            	col001 = lerp(col101, col001, g0.x);  //weigh along the x-direction
+            	float4 col011 = sampleTF1DColor(tex3Dlod(tex, float4(h0.x, h1.y, h1.z, 0.0)));
+            	float4 col111 = sampleTF1DColor(tex3Dlod(tex, float4(h1, 0.0)));
+            	col011 = lerp(col111, col011, g0.x);  //weigh along the x-direction
+            	col001 = lerp(col011, col001, g0.y);  //weigh along the y-direction
+            
+            	return lerp(col001, col000, g0.z);  //weigh along the z-direction
+            }
             
             /// <summary>
             ///     Axis-Aligned Bounding Box (AABB) box. An AABB only needs
@@ -150,13 +197,6 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                 t_out = min(min(tmax.x, tmax.y), tmax.z);
             }
             
-            /// <summary>
-            ///     Samples the one dimensional transfer function texture for
-            ///     color and alpha.
-            /// </summary>
-            float4 sampleTF1DColor(float density) {
-                return tex2Dlod(_TFColors, float4(density, 0.0f, 0.0f, 0.0f));
-            }
 
             float3 getRayDirection(float3 objectSpaceVertex) {
                 if (unity_OrthoParams.w > 0) {
@@ -223,16 +263,15 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                     float4 src;
                     if (TRICUBIC_PRE_CLASSIFICATION)
                     {
-                        sampled_density = interpolateTricubicFast(_Densities, accm_ray + 0.5f, _DensitiesTexSize);
+                        sampled_density = interpolateTricubic(_Densities, accm_ray + 0.5f, _DensitiesTexSize);
                         src = sampleTF1DColor(sampled_density);
                     }
-                    // TODO: this needs a separate implementation...
-                    // if (TRICUBIC_POST_CLASSIFICATION) 
-                    // {
-                    //     
-                    // }
-                    // NEAREST_NEIGHBOR
-                    if (NEAREST_NEIGHBOR)
+                    // TODO: is this interpolation correct? Why is it slow af?
+                    else if (TRICUBIC_POST_CLASSIFICATION) 
+                    {
+                        src = interpolateTricubicColor(_Densities, accm_ray + 0.5f, _DensitiesTexSize);
+                    }
+                    else  // NEAREST_NEIGHBOR
                     {
                         sampled_density = tex3Dlod(_Densities, float4(accm_ray + 0.5f, 0.0f)).r;
                         src = sampleTF1DColor(sampled_density);

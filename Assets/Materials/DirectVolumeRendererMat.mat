@@ -12,7 +12,7 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - TRICUBIC_PRE_CLASSIFICATION
+  - NEAREST_NEIGHBOR
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -34,7 +34,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AlphaCutoff: 0.8021691
+    - _AlphaCutoff: 1
     m_Colors:
     - _DensitiesTexSize: {r: 512, g: 512, b: 62, a: 0}
   m_BuildTextureStacks: []

@@ -10,7 +10,7 @@ namespace UnityCTVisualizer
     {
         NEAREST_NEIGHBOR = 0,
         TRICUBIC_PRE_CLASSIFICATION,
-        // TRICUBIC_POST_CLASSIFICATION,
+        TRICUBIC_POST_CLASSIFICATION,
     }
 
     public class VisualizationParametersUI : MonoBehaviour
