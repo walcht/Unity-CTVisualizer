@@ -13,6 +13,8 @@
 A Unity3D package for efficiently visualizing and manipulating (mostly)
 medical volumetric data.
 
+![unity-ct-visualizer-00](https://github.com/walcht/Unity-CTVisualizer/assets/89390465/6084fb58-689a-4cf9-97f4-b84a0e262e9a)
+
 ## Workflow
 
 UnityCT-Visualizer is actually made of two *sub-applications*:
@@ -92,7 +94,30 @@ Tested on these Unity versions:
 
 ## Usage
 
+ UnityCT-Visualizer is a UI-centric application, i.e., all operations are mainly
+ done through the provided GUI. Visualize a CT\MRI dataset within the Unity Editor:
+
+ 1. Click on ```import``` to import a .uvds dataset. Archived UVDS datasets are
+ also importable (currently only ZIP).
+
+ 1. Once import is done, the volumetric object should appear along with other UI
+ components
+
+ 1. In the ```Visualization Parameters``` UI component, chose the transfer function
+ you want to use (currently only 1D is supported). You can also change the
+ interpolation, although currently we advice against choosing other than
+ ```nearest neighbor```
+
+ 1. The default TF is TF1D, its UI will be shown in the bottom:
+
+    ![unity-ct-visulizer-TF](https://github.com/walcht/Unity-CTVisualizer/assets/89390465/3d4decdd-6974-46c6-b572-f41088265e75)
+    - green line is for opacities classification
+    - bottom gradient color band/texture is for colors (no alpha) classification
+    - changes are real-time reflected in the volumetric object
+
 ## Project Structure
+
+TODO
 
 ## Optimization Techniques
 
@@ -144,9 +169,18 @@ In early ray termination, sampling along a ray is stopped when the accumulated o
 
 ## Performance Statistics
 
-TODO: Add performance statistics for datasets with various sizes and characteristics
-here.
+TODO
 
-## Limitations
+## TODOs
+
+- [ ] find an efficient *empty ray skipping* optimization technique implementation
+- [ ] add more sampling interpolators (cubic, Hermite, etc.)
+- [ ] add 2D gradient-based transfer function
+- [ ] add doxygen for documentation generation
+- [ ] optimize the terrible Shader implementations
+- [ ] add zoom-in/zoom-out functionalities for the TF UI
 
 ## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+See LICENSE.txt file for more info.
