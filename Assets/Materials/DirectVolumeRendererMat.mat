@@ -35,7 +35,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AlphaCutoff: 0.99607843
+    - _AlphaCutoff: 1
     - _MaxIterations: 512
     m_Colors:
     - _DensitiesTexSize: {r: 512, g: 512, b: 62, a: 0}
