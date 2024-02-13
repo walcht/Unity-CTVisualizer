@@ -9,8 +9,8 @@ namespace UnityCTVisualizer
     public enum INTERPOLATION
     {
         NEAREST_NEIGHBOR = 0,
-        TRICUBIC_PRE_CLASSIFICATION,
-        TRICUBIC_POST_CLASSIFICATION,
+        TRILINEAR_PRE_CLASSIFICATION,
+        TRILINEAR_POST_CLASSIFICATION,
     }
 
     public class VisualizationParametersUI : MonoBehaviour

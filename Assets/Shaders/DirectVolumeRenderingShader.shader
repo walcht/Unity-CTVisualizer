@@ -5,6 +5,7 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
 	    [NoScaleOffset] _Densities("Densities", 3D) = "" {}
         [NoScaleOffset] _TFColors("Transfer Function Colors Texture", 2D) = "" {}
 		_AlphaCutoff("Opacity Cutoff", Range(0.0, 1.0)) = 0.95
+        _MaxIterations("Maximum number of samples to take along longest path (cube diagonal)", int) = 512
         [HideInInspector] _DensitiesTexSize("Densities 3D texture dimensions", Vector) = (1, 1, 1)
 	}
 
@@ -17,7 +18,7 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
 		Pass
 		{
 		    CGPROGRAM
-            #pragma multi_compile NEAREST_NEIGHBOR TRICUBIC_PRE_CLASSIFICATION TRICUBIC_POST_CLASSIFICATION
+            #pragma multi_compile NEAREST_NEIGHBOR TRILINEAR_PRE_CLASSIFICATION TRILINEAR_POST_CLASSIFICATION
 			#pragma vertex vert
 			#pragma fragment frag
             #include "UnityCG.cginc"
@@ -47,125 +48,161 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                 return tex2Dlod(_TFColors, float4(density, 0.0f, 0.0f, 0.0f));
             }
 
-            ////
-            /// Copyright (c) 2008-2009, Danny Ruijters. All rights reserved.
-            /// http://www.dannyruijters.nl/cubicinterpolation/
-            /// This file is part of CUDA Cubic B-Spline Interpolation (CI).
             /// 
-            /// Redistribution and use in source and binary forms, with or without
-            /// modification, are permitted provided that the following conditions are met:
-            /// *  Redistributions of source code must retain the above copyright
-            ///    notice, this list of conditions and the following disclaimer.
-            /// *  Redistributions in binary form must reproduce the above copyright
-            ///    notice, this list of conditions and the following disclaimer in the
-            ///    documentation and/or other materials provided with the distribution.
-            /// *  Neither the name of the copyright holders nor the names of its
-            ///    contributors may be used to endorse or promote products derived from
-            ///    this software without specific prior written permission.
-            /// 
-            /// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-            /// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-            /// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-            /// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-            /// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-            /// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-            /// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-            /// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-            /// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-            /// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-            /// POSSIBILITY OF SUCH DAMAGE.
-            /// 
-            /// The views and conclusions contained in the software and documentation are
-            /// those of the authors and should not be interpreted as representing official
-            /// policies, either expressed or implied.
-            /// 
-            /// When using this code in a scientific project, please cite one or all of the
-            /// following papers:
-            /// *  Daniel Ruijters and Philippe Th�venaz,
-            ///    GPU Prefilter for Accurate Cubic B-Spline Interpolation, 
-            ///    The Computer Journal, vol. 55, no. 1, pp. 15-20, January 2012.
-            ///    http://dannyruijters.nl/docs/cudaPrefilter3.pdf
-            /// *  Daniel Ruijters, Bart M. ter Haar Romeny, and Paul Suetens,
-            ///    Efficient GPU-Based Texture Interpolation using Uniform B-Splines,
-            ///    Journal of Graphics Tools, vol. 13, no. 4, pp. 61-69, 2008.
+            /// <summary>
+            ///     Converts RGB color to HSV space with no changes to the alpha component.
+            ///     Code copied and modified from: https://stackoverflow.com/questions/15095909/from-rgb-to-hsv-in-opengl-glsl
+            /// </summary>
+            float4 rgb2hsv(float4 c)
+            {
+                float4 K = float4(0.0f, -1.0f / 3.0f, 2.0f / 3.0f, -1.0f);
+                float4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));
+                float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
+                float d = q.x - min(q.w, q.y);
+                float e = 1.0e-10;
+                return float4(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x, c.a);
+            }
+            
+            /// <summary>
+            ///     Converts HSV color to RGB space with no changes to the alpha component.
+            ///     Code copied and modified from: https://stackoverflow.com/questions/15095909/from-rgb-to-hsv-in-opengl-glsl
+            /// </summary>
+            float4 hsv2rgb(float4 c)
+            {
+                float4 K = float4(1.0f, 2.0f / 3.0f, 1.0f / 3.0f, 3.0f);
+                float3 p = abs(frac(c.xxx + K.xyz) * 6.0f - K.www);
+                return float4(c.z * lerp(K.xxx, clamp(p - K.xxx, 0.0f, 1.0f), c.y), c.a);
+            }
+
+            
+            /// for reference: https://paulbourke.net/miscellaneous/interpolation/
             ///
-            // TODO: re-implement this. Understand it and make it faster (if possible)
+            ///                          Y
+            ///         Z              ↗
+            ///        ↑   .+------- c1
+            ///          .' |      .'|
+            ///         +---+----+'  |
+            ///         |   |    |   |
+            ///         |  ,+----+---+ 
+            ///         |.'      | .' 
+            ///        c0--------+' ⟶  X
+            ///
+            /// <summary>
+            ///     Trilinear interpolation. Use this for pre-classification interpolation (i.e.,
+            ///     interpolate density then classify using TF lookup texture. This method is expensive.
+            /// </summary>
+            float4 interpolateTrilinear(sampler3D tex, float3 texCoord, float3 texSize)
+            {
+            	// shift the coordinate from [0,1] to [-0.5, texSize-0.5]
+            	float3 coord_grid = texCoord * texSize - 0.5f;
+            	float3 index = floor(coord_grid);
+                // v is value withing the 8 vertices (cube) is used for interpolation
+            	float3 v = coord_grid - index;
+                float3 one_minus_v = 1.0f - v;
+                float3 one_over_texsize = 1.0f / texSize;
+                // the values at the vertices are needed. Since this is an AABB, only the 2 corners c0 and c1
+                // need to be determined
+                float3 c0 = one_over_texsize * (index + 0.5f);
+                float3 c1 = one_over_texsize * (index + 1.5f);
+            	float4 V_000 = tex3Dlod(tex, float4(c0, 0.0f));
+            	float4 V_100 = tex3Dlod(tex, float4(c1.x, c0.y, c0.z, 0.0f));
+            	float4 V_010 = tex3Dlod(tex, float4(c0.x, c1.y, c0.z, 0.0f));
+            	float4 V_110 = tex3Dlod(tex, float4(c1.x, c1.y, c0.z, 0.0f));
+            	float4 V_001 = tex3Dlod(tex, float4(c0.x, c0.y, c1.z, 0.0f));
+            	float4 V_101 = tex3Dlod(tex, float4(c1.x, c0.y, c1.z, 0.0f));
+            	float4 V_011 = tex3Dlod(tex, float4(c0.x, c1.y, c1.z, 0.0f));
+            	float4 V_111 = tex3Dlod(tex, float4(c1, 0.0f));
+                return  V_000 * one_minus_v.x * one_minus_v.y * one_minus_v.z +
+                        V_100 * v.x * one_minus_v.y * one_minus_v.z +
+                        V_010 * one_minus_v.x * v.y * one_minus_v.z +
+                        V_001 * one_minus_v.x * one_minus_v.y * v.z +
+                        V_101 * v.x * one_minus_v.y * v.z +
+                        V_011 * one_minus_v.x * v.y * v.z +
+                        V_110 * v.x * v.y * one_minus_v.z +
+                        V_111 * v.x * v.y * v.z;
+            
+            }
+            
+            // TODO:    this piece of junk is unoptimized af. Please improve this garbage. Nvm I think this
+            //          will always yield worse results
+            // NOTE: For more accurate interpolations, we convert color from RGB space to HSL
+            /// <summary>
+            ///     Same as translateTrilinear except that colors sampled from the provided transfer function
+            ///     are sampled instead of densities. This function is even more expensive because double the
+            ///     sampling operations are used (16 vs. 8)
+            /// </summary>
+            /// <remark>
+            ///     
+            /// </remark>
+            float4 interpolateTrilinearColor(sampler3D tex, float3 texCoord, float3 texSize)
+            {
+            	float3 coord_grid = texCoord * texSize - 0.5;
+            	float3 index = floor(coord_grid);
+                // v is value withing the 8 vertices (cube) is used for interpolation
+            	float3 v = coord_grid - index;
+                float3 one_minus_v = 1.0f - v;
+                float3 one_over_texsize = 1.0f / texSize;
+                // the values at the vertices are needed. Since this is an AABB, only the 2 corners c0 and c1
+                // need to be determined
+                float3 c0 = one_over_texsize * (index + 0.5f);
+                float3 c1 = one_over_texsize * (index + 1.5f);
+                // do the linear interpolation in HSV space
+            	float4 V_000 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c0, 0.0f))));
+            	float4 V_100 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c1.x, c0.y, c0.z, 0.0f))));
+            	float4 V_010 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c0.x, c1.y, c0.z, 0.0f))));
+            	float4 V_110 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c1.x, c1.y, c0.z, 0.0f))));
+            	float4 V_001 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c0.x, c0.y, c1.z, 0.0f))));
+            	float4 V_101 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c1.x, c0.y, c1.z, 0.0f))));
+            	float4 V_011 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c0.x, c1.y, c1.z, 0.0f))));
+            	float4 V_111 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c1, 0.0f))));
+                // then convert back to RGB space
+                return  hsv2rgb(
+                            V_000 * one_minus_v.x * one_minus_v.y * one_minus_v.z +
+                            V_100 * v.x * one_minus_v.y * one_minus_v.z +
+                            V_010 * one_minus_v.x * v.y * one_minus_v.z +
+                            V_001 * one_minus_v.x * one_minus_v.y * v.z +
+                            V_101 * v.x * one_minus_v.y * v.z +
+                            V_011 * one_minus_v.x * v.y * v.z +
+                            V_110 * v.x * v.y * one_minus_v.z +
+                            V_111 * v.x * v.y * v.z
+                        );
+            }
+
+            /// <summary>
+            ///     Tricubic interpolation. Use this for pre-classification interpolation (i.e.,
+            ///     interpolate density then classify using TF lookup texture. This method is more
+            ///     expensive than interpolateTrilinear.
+            /// </summary>
             float4 interpolateTricubic(sampler3D tex, float3 texCoord, float3 texSize)
             {
             	// shift the coordinate from [0,1] to [-0.5, texSize-0.5]
-            	float3 coord_grid = texCoord * texSize - 0.5;
+            	float3 coord_grid = texCoord * texSize - 0.5f;
             	float3 index = floor(coord_grid);
-            	float3 fraction = coord_grid - index;
-            	float3 one_frac = 1.0 - fraction;
+                // v is value withing the 8 vertices (cube) is used for interpolation
+            	float3 v = coord_grid - index;
+                float3 one_minus_v = 1.0f - v;
+                float3 one_over_texsize = 1.0f / texSize;
+                // the values at the vertices are needed. Since this is an AABB, only the 2 corners c0 and c1
+                // need to be determined
+                float3 c0 = one_over_texsize * (index + 0.5f);
+                float3 c1 = one_over_texsize * (index + 1.5f);
+            	float4 V_000 = tex3Dlod(tex, float4(c0, 0.0f));
+            	float4 V_100 = tex3Dlod(tex, float4(c1.x, c0.y, c0.z, 0.0f));
+            	float4 V_010 = tex3Dlod(tex, float4(c0.x, c1.y, c0.z, 0.0f));
+            	float4 V_110 = tex3Dlod(tex, float4(c1.x, c1.y, c0.z, 0.0f));
+            	float4 V_001 = tex3Dlod(tex, float4(c0.x, c0.y, c1.z, 0.0f));
+            	float4 V_101 = tex3Dlod(tex, float4(c1.x, c0.y, c1.z, 0.0f));
+            	float4 V_011 = tex3Dlod(tex, float4(c0.x, c1.y, c1.z, 0.0f));
+            	float4 V_111 = tex3Dlod(tex, float4(c1, 0.0f));
+                return  V_000 * one_minus_v.x * one_minus_v.y * one_minus_v.z +
+                        V_100 * v.x * one_minus_v.y * one_minus_v.z +
+                        V_010 * one_minus_v.x * v.y * one_minus_v.z +
+                        V_001 * one_minus_v.x * one_minus_v.y * v.z +
+                        V_101 * v.x * one_minus_v.y * v.z +
+                        V_011 * one_minus_v.x * v.y * v.z +
+                        V_110 * v.x * v.y * one_minus_v.z +
+                        V_111 * v.x * v.y * v.z;
             
-            	float3 w0 = 1.0/6.0 * one_frac*one_frac*one_frac;
-            	float3 w1 = 2.0/3.0 - 0.5 * fraction*fraction*(2.0-fraction);
-            	float3 w2 = 2.0/3.0 - 0.5 * one_frac*one_frac*(2.0-one_frac);
-            	float3 w3 = 1.0/6.0 * fraction*fraction*fraction;
-            
-            	float3 g0 = w0 + w1;
-            	float3 g1 = w2 + w3;
-            	float3 mult = 1.0 / texSize;
-            	float3 h0 = mult * ((w1 / g0) - 0.5 + index);  //h0 = w1/g0 - 1, move from [-0.5, texSize-0.5] to [0,1]
-            	float3 h1 = mult * ((w3 / g1) + 1.5 + index);  //h1 = w3/g1 + 1, move from [-0.5, texSize-0.5] to [0,1]
-            
-            	// fetch the eight linear interpolations
-            	// weighting and fetching is interleaved for performance and stability reasons
-            	float4 tex000 = tex3Dlod(tex, float4(h0, 0.0));
-            	float4 tex100 = tex3Dlod(tex, float4(h1.x, h0.y, h0.z, 0.0));
-            	tex000 = lerp(tex100, tex000, g0.x);  //weigh along the x-direction
-            	float4 tex010 = tex3Dlod(tex, float4(h0.x, h1.y, h0.z, 0.0));
-            	float4 tex110 = tex3Dlod(tex, float4(h1.x, h1.y, h0.z, 0.0));
-            	tex010 = lerp(tex110, tex010, g0.x);  //weigh along the x-direction
-            	tex000 = lerp(tex010, tex000, g0.y);  //weigh along the y-direction
-            	float4 tex001 = tex3Dlod(tex, float4(h0.x, h0.y, h1.z, 0.0));
-            	float4 tex101 = tex3Dlod(tex, float4(h1.x, h0.y, h1.z, 0.0));
-            	tex001 = lerp(tex101, tex001, g0.x);  //weigh along the x-direction
-            	float4 tex011 = tex3Dlod(tex, float4(h0.x, h1.y, h1.z, 0.0));
-            	float4 tex111 = tex3Dlod(tex, float4(h1, 0.0));
-            	tex011 = lerp(tex111, tex011, g0.x);  //weigh along the x-direction
-            	tex001 = lerp(tex011, tex001, g0.y);  //weigh along the y-direction
-            
-            	return lerp(tex001, tex000, g0.z);  //weigh along the z-direction
-            }
-
-            float4 interpolateTricubicColor(sampler3D tex, float3 texCoord, float3 texSize)
-            {
-            	// shift the coordinate from [0,1] to [-0.5, texSize-0.5]
-            	float3 coord_grid = texCoord * texSize - 0.5;
-            	float3 index = floor(coord_grid);
-            	float3 fraction = coord_grid - index;
-            	float3 one_frac = 1.0 - fraction;
-            
-            	float3 w0 = 1.0/6.0 * one_frac*one_frac*one_frac;
-            	float3 w1 = 2.0/3.0 - 0.5 * fraction*fraction*(2.0-fraction);
-            	float3 w2 = 2.0/3.0 - 0.5 * one_frac*one_frac*(2.0-one_frac);
-            	float3 w3 = 1.0/6.0 * fraction*fraction*fraction;
-            
-            	float3 g0 = w0 + w1;
-            	float3 g1 = w2 + w3;
-            	float3 mult = 1.0 / texSize;
-            	float3 h0 = mult * ((w1 / g0) - 0.5 + index);  //h0 = w1/g0 - 1, move from [-0.5, texSize-0.5] to [0,1]
-            	float3 h1 = mult * ((w3 / g1) + 1.5 + index);  //h1 = w3/g1 + 1, move from [-0.5, texSize-0.5] to [0,1]
-            
-            	// fetch the eight linear interpolations
-            	// weighting and fetching is interleaved for performance and stability reasons
-            	float4 col000 = sampleTF1DColor(tex3Dlod(tex, float4(h0, 0.0)));
-            	float4 col100 = sampleTF1DColor(tex3Dlod(tex, float4(h1.x, h0.y, h0.z, 0.0)));
-            	col000 = lerp(col100, col000, g0.x);  //weigh along the x-direction
-            	float4 col010 = sampleTF1DColor(tex3Dlod(tex, float4(h0.x, h1.y, h0.z, 0.0)));
-            	float4 col110 = sampleTF1DColor(tex3Dlod(tex, float4(h1.x, h1.y, h0.z, 0.0)));
-            	col010 = lerp(col110, col010, g0.x);  //weigh along the x-direction
-            	col000 = lerp(col010, col000, g0.y);  //weigh along the y-direction
-            	float4 col001 = sampleTF1DColor(tex3Dlod(tex, float4(h0.x, h0.y, h1.z, 0.0)));
-            	float4 col101 = sampleTF1DColor(tex3Dlod(tex, float4(h1.x, h0.y, h1.z, 0.0)));
-            	col001 = lerp(col101, col001, g0.x);  //weigh along the x-direction
-            	float4 col011 = sampleTF1DColor(tex3Dlod(tex, float4(h0.x, h1.y, h1.z, 0.0)));
-            	float4 col111 = sampleTF1DColor(tex3Dlod(tex, float4(h1, 0.0)));
-            	col011 = lerp(col111, col011, g0.x);  //weigh along the x-direction
-            	col001 = lerp(col011, col001, g0.y);  //weigh along the y-direction
-            
-            	return lerp(col001, col000, g0.z);  //weigh along the z-direction
             }
             
             /// <summary>
@@ -261,22 +298,24 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                     // don't forget to transition from [-0.5, 0.5] range to [0.0, 1.0]
                     float sampled_density;
                     float4 src;
-                    if (TRICUBIC_PRE_CLASSIFICATION)
-                    {
-                        sampled_density = interpolateTricubic(_Densities, accm_ray + 0.5f, _DensitiesTexSize);
-                        src = sampleTF1DColor(sampled_density);
-                    }
-                    // TODO: is this interpolation correct? Why is it slow af?
-                    else if (TRICUBIC_POST_CLASSIFICATION) 
-                    {
-                        src = interpolateTricubicColor(_Densities, accm_ray + 0.5f, _DensitiesTexSize);
-                    }
-                    else  // NEAREST_NEIGHBOR
+                    if (NEAREST_NEIGHBOR)
                     {
                         sampled_density = tex3Dlod(_Densities, float4(accm_ray + 0.5f, 0.0f)).r;
                         src = sampleTF1DColor(sampled_density);
                     }
+                    else if (TRILINEAR_PRE_CLASSIFICATION)
+                    {
+                        sampled_density = interpolateTrilinear(_Densities, accm_ray + 0.5f, _DensitiesTexSize);
+                        src = sampleTF1DColor(sampled_density);
+                    }
+                    // TODO: is this interpolation correct? Why is it slow af?
+                    else if (TRILINEAR_POST_CLASSIFICATION) 
+                    {
+                        src = interpolateTrilinearColor(_Densities, accm_ray + 0.5f, _DensitiesTexSize);
+                    }
                     // blending
+                    // TODO:    is direct sampling of alpha the correct method? Check what this is doing:
+                    //          https://github.com/LDeakin/VkVolume/blob/master/shaders/volume_render.frag
                     src.rgb *= src.a;
                     accm_color = (1.0f - accm_color.a) * src + accm_color;
                     accm_ray += delta_step;
