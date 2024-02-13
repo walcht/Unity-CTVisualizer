@@ -26,11 +26,11 @@ namespace UnityCTVisualizer
     ""name"": ""UnityCTVisualizerInput"",
     ""maps"": [
         {
-            ""name"": ""CameraControls"",
+            ""name"": ""VolumetricObjectControls"",
             ""id"": ""9dc6422a-bbbd-42e0-8b26-5da2e6320554"",
             ""actions"": [
                 {
-                    ""name"": ""HorizontalRotation"",
+                    ""name"": ""Rotation"",
                     ""type"": ""PassThrough"",
                     ""id"": ""a154b685-ba14-481d-b9a1-244df53a341a"",
                     ""expectedControlType"": ""Delta"",
@@ -39,16 +39,7 @@ namespace UnityCTVisualizer
                     ""initialStateCheck"": true
                 },
                 {
-                    ""name"": ""VerticalRotation"",
-                    ""type"": ""PassThrough"",
-                    ""id"": ""cf558708-d376-4125-a997-09d10416da1d"",
-                    ""expectedControlType"": ""Delta"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": true
-                },
-                {
-                    ""name"": ""ZoomInOut"",
+                    ""name"": ""Scale"",
                     ""type"": ""PassThrough"",
                     ""id"": ""29c8d2a4-9dd5-43cc-b822-cf9e59638612"",
                     ""expectedControlType"": """",
@@ -57,7 +48,7 @@ namespace UnityCTVisualizer
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""SlowZoomActivator"",
+                    ""name"": ""SlowScaleActivator"",
                     ""type"": ""Button"",
                     ""id"": ""a640b0f1-b8f2-473c-bb22-f9fb527531a0"",
                     ""expectedControlType"": ""Button"",
@@ -74,7 +65,7 @@ namespace UnityCTVisualizer
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""ZoomInOut"",
+                    ""action"": ""Scale"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -85,7 +76,7 @@ namespace UnityCTVisualizer
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""SlowZoomActivator"",
+                    ""action"": ""SlowScaleActivator"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -96,7 +87,7 @@ namespace UnityCTVisualizer
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""HorizontalRotation"",
+                    ""action"": ""Rotation"",
                     ""isComposite"": true,
                     ""isPartOfComposite"": false
                 },
@@ -107,7 +98,7 @@ namespace UnityCTVisualizer
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""HorizontalRotation"",
+                    ""action"": ""Rotation"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
                 },
@@ -118,7 +109,7 @@ namespace UnityCTVisualizer
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""HorizontalRotation"",
+                    ""action"": ""Rotation"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
                 },
@@ -129,51 +120,7 @@ namespace UnityCTVisualizer
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""HorizontalRotation"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": true
-                },
-                {
-                    ""name"": ""Two Modifiers"",
-                    ""id"": ""8073ebb6-b87d-4c98-9339-c14132f13126"",
-                    ""path"": ""TwoModifiers"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""VerticalRotation"",
-                    ""isComposite"": true,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": ""modifier1"",
-                    ""id"": ""d90f3ee9-011a-44d1-ab4a-6f4856c7d0ce"",
-                    ""path"": ""<Keyboard>/leftCtrl"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""VerticalRotation"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": true
-                },
-                {
-                    ""name"": ""modifier2"",
-                    ""id"": ""4ab470fb-9313-4b9d-ae6c-70b6e425ec56"",
-                    ""path"": ""<Mouse>/rightButton"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""VerticalRotation"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": true
-                },
-                {
-                    ""name"": ""binding"",
-                    ""id"": ""2ac65fbe-3c1c-4c40-b8da-eba56a56d8e5"",
-                    ""path"": ""<Pointer>/delta"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""VerticalRotation"",
+                    ""action"": ""Rotation"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
                 }
@@ -182,12 +129,11 @@ namespace UnityCTVisualizer
     ],
     ""controlSchemes"": []
 }");
-            // CameraControls
-            m_CameraControls = asset.FindActionMap("CameraControls", throwIfNotFound: true);
-            m_CameraControls_HorizontalRotation = m_CameraControls.FindAction("HorizontalRotation", throwIfNotFound: true);
-            m_CameraControls_VerticalRotation = m_CameraControls.FindAction("VerticalRotation", throwIfNotFound: true);
-            m_CameraControls_ZoomInOut = m_CameraControls.FindAction("ZoomInOut", throwIfNotFound: true);
-            m_CameraControls_SlowZoomActivator = m_CameraControls.FindAction("SlowZoomActivator", throwIfNotFound: true);
+            // VolumetricObjectControls
+            m_VolumetricObjectControls = asset.FindActionMap("VolumetricObjectControls", throwIfNotFound: true);
+            m_VolumetricObjectControls_Rotation = m_VolumetricObjectControls.FindAction("Rotation", throwIfNotFound: true);
+            m_VolumetricObjectControls_Scale = m_VolumetricObjectControls.FindAction("Scale", throwIfNotFound: true);
+            m_VolumetricObjectControls_SlowScaleActivator = m_VolumetricObjectControls.FindAction("SlowScaleActivator", throwIfNotFound: true);
         }
 
         public void Dispose()
@@ -246,81 +192,72 @@ namespace UnityCTVisualizer
             return asset.FindBinding(bindingMask, out action);
         }
 
-        // CameraControls
-        private readonly InputActionMap m_CameraControls;
-        private List<ICameraControlsActions> m_CameraControlsActionsCallbackInterfaces = new List<ICameraControlsActions>();
-        private readonly InputAction m_CameraControls_HorizontalRotation;
-        private readonly InputAction m_CameraControls_VerticalRotation;
-        private readonly InputAction m_CameraControls_ZoomInOut;
-        private readonly InputAction m_CameraControls_SlowZoomActivator;
-        public struct CameraControlsActions
+        // VolumetricObjectControls
+        private readonly InputActionMap m_VolumetricObjectControls;
+        private List<IVolumetricObjectControlsActions> m_VolumetricObjectControlsActionsCallbackInterfaces = new List<IVolumetricObjectControlsActions>();
+        private readonly InputAction m_VolumetricObjectControls_Rotation;
+        private readonly InputAction m_VolumetricObjectControls_Scale;
+        private readonly InputAction m_VolumetricObjectControls_SlowScaleActivator;
+        public struct VolumetricObjectControlsActions
         {
             private @UnityCTVisualizerInput m_Wrapper;
-            public CameraControlsActions(@UnityCTVisualizerInput wrapper) { m_Wrapper = wrapper; }
-            public InputAction @HorizontalRotation => m_Wrapper.m_CameraControls_HorizontalRotation;
-            public InputAction @VerticalRotation => m_Wrapper.m_CameraControls_VerticalRotation;
-            public InputAction @ZoomInOut => m_Wrapper.m_CameraControls_ZoomInOut;
-            public InputAction @SlowZoomActivator => m_Wrapper.m_CameraControls_SlowZoomActivator;
-            public InputActionMap Get() { return m_Wrapper.m_CameraControls; }
+            public VolumetricObjectControlsActions(@UnityCTVisualizerInput wrapper) { m_Wrapper = wrapper; }
+            public InputAction @Rotation => m_Wrapper.m_VolumetricObjectControls_Rotation;
+            public InputAction @Scale => m_Wrapper.m_VolumetricObjectControls_Scale;
+            public InputAction @SlowScaleActivator => m_Wrapper.m_VolumetricObjectControls_SlowScaleActivator;
+            public InputActionMap Get() { return m_Wrapper.m_VolumetricObjectControls; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
             public bool enabled => Get().enabled;
-            public static implicit operator InputActionMap(CameraControlsActions set) { return set.Get(); }
-            public void AddCallbacks(ICameraControlsActions instance)
+            public static implicit operator InputActionMap(VolumetricObjectControlsActions set) { return set.Get(); }
+            public void AddCallbacks(IVolumetricObjectControlsActions instance)
             {
-                if (instance == null || m_Wrapper.m_CameraControlsActionsCallbackInterfaces.Contains(instance)) return;
-                m_Wrapper.m_CameraControlsActionsCallbackInterfaces.Add(instance);
-                @HorizontalRotation.started += instance.OnHorizontalRotation;
-                @HorizontalRotation.performed += instance.OnHorizontalRotation;
-                @HorizontalRotation.canceled += instance.OnHorizontalRotation;
-                @VerticalRotation.started += instance.OnVerticalRotation;
-                @VerticalRotation.performed += instance.OnVerticalRotation;
-                @VerticalRotation.canceled += instance.OnVerticalRotation;
-                @ZoomInOut.started += instance.OnZoomInOut;
-                @ZoomInOut.performed += instance.OnZoomInOut;
-                @ZoomInOut.canceled += instance.OnZoomInOut;
-                @SlowZoomActivator.started += instance.OnSlowZoomActivator;
-                @SlowZoomActivator.performed += instance.OnSlowZoomActivator;
-                @SlowZoomActivator.canceled += instance.OnSlowZoomActivator;
+                if (instance == null || m_Wrapper.m_VolumetricObjectControlsActionsCallbackInterfaces.Contains(instance)) return;
+                m_Wrapper.m_VolumetricObjectControlsActionsCallbackInterfaces.Add(instance);
+                @Rotation.started += instance.OnRotation;
+                @Rotation.performed += instance.OnRotation;
+                @Rotation.canceled += instance.OnRotation;
+                @Scale.started += instance.OnScale;
+                @Scale.performed += instance.OnScale;
+                @Scale.canceled += instance.OnScale;
+                @SlowScaleActivator.started += instance.OnSlowScaleActivator;
+                @SlowScaleActivator.performed += instance.OnSlowScaleActivator;
+                @SlowScaleActivator.canceled += instance.OnSlowScaleActivator;
             }
 
-            private void UnregisterCallbacks(ICameraControlsActions instance)
+            private void UnregisterCallbacks(IVolumetricObjectControlsActions instance)
             {
-                @HorizontalRotation.started -= instance.OnHorizontalRotation;
-                @HorizontalRotation.performed -= instance.OnHorizontalRotation;
-                @HorizontalRotation.canceled -= instance.OnHorizontalRotation;
-                @VerticalRotation.started -= instance.OnVerticalRotation;
-                @VerticalRotation.performed -= instance.OnVerticalRotation;
-                @VerticalRotation.canceled -= instance.OnVerticalRotation;
-                @ZoomInOut.started -= instance.OnZoomInOut;
-                @ZoomInOut.performed -= instance.OnZoomInOut;
-                @ZoomInOut.canceled -= instance.OnZoomInOut;
-                @SlowZoomActivator.started -= instance.OnSlowZoomActivator;
-                @SlowZoomActivator.performed -= instance.OnSlowZoomActivator;
-                @SlowZoomActivator.canceled -= instance.OnSlowZoomActivator;
+                @Rotation.started -= instance.OnRotation;
+                @Rotation.performed -= instance.OnRotation;
+                @Rotation.canceled -= instance.OnRotation;
+                @Scale.started -= instance.OnScale;
+                @Scale.performed -= instance.OnScale;
+                @Scale.canceled -= instance.OnScale;
+                @SlowScaleActivator.started -= instance.OnSlowScaleActivator;
+                @SlowScaleActivator.performed -= instance.OnSlowScaleActivator;
+                @SlowScaleActivator.canceled -= instance.OnSlowScaleActivator;
             }
 
-            public void RemoveCallbacks(ICameraControlsActions instance)
+            public void RemoveCallbacks(IVolumetricObjectControlsActions instance)
             {
-                if (m_Wrapper.m_CameraControlsActionsCallbackInterfaces.Remove(instance))
+                if (m_Wrapper.m_VolumetricObjectControlsActionsCallbackInterfaces.Remove(instance))
                     UnregisterCallbacks(instance);
             }
 
-            public void SetCallbacks(ICameraControlsActions instance)
+            public void SetCallbacks(IVolumetricObjectControlsActions instance)
             {
-                foreach (var item in m_Wrapper.m_CameraControlsActionsCallbackInterfaces)
+                foreach (var item in m_Wrapper.m_VolumetricObjectControlsActionsCallbackInterfaces)
                     UnregisterCallbacks(item);
-                m_Wrapper.m_CameraControlsActionsCallbackInterfaces.Clear();
+                m_Wrapper.m_VolumetricObjectControlsActionsCallbackInterfaces.Clear();
                 AddCallbacks(instance);
             }
         }
-        public CameraControlsActions @CameraControls => new CameraControlsActions(this);
-        public interface ICameraControlsActions
+        public VolumetricObjectControlsActions @VolumetricObjectControls => new VolumetricObjectControlsActions(this);
+        public interface IVolumetricObjectControlsActions
         {
-            void OnHorizontalRotation(InputAction.CallbackContext context);
-            void OnVerticalRotation(InputAction.CallbackContext context);
-            void OnZoomInOut(InputAction.CallbackContext context);
-            void OnSlowZoomActivator(InputAction.CallbackContext context);
+            void OnRotation(InputAction.CallbackContext context);
+            void OnScale(InputAction.CallbackContext context);
+            void OnSlowScaleActivator(InputAction.CallbackContext context);
         }
     }
 }

@@ -2,11 +2,11 @@
     "name": "UnityCTVisualizerInput",
     "maps": [
         {
-            "name": "CameraControls",
+            "name": "VolumetricObjectControls",
             "id": "9dc6422a-bbbd-42e0-8b26-5da2e6320554",
             "actions": [
                 {
-                    "name": "HorizontalRotation",
+                    "name": "Rotation",
                     "type": "PassThrough",
                     "id": "a154b685-ba14-481d-b9a1-244df53a341a",
                     "expectedControlType": "Delta",
@@ -15,16 +15,7 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "VerticalRotation",
-                    "type": "PassThrough",
-                    "id": "cf558708-d376-4125-a997-09d10416da1d",
-                    "expectedControlType": "Delta",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": true
-                },
-                {
-                    "name": "ZoomInOut",
+                    "name": "Scale",
                     "type": "PassThrough",
                     "id": "29c8d2a4-9dd5-43cc-b822-cf9e59638612",
                     "expectedControlType": "",
@@ -33,7 +24,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "SlowZoomActivator",
+                    "name": "SlowScaleActivator",
                     "type": "Button",
                     "id": "a640b0f1-b8f2-473c-bb22-f9fb527531a0",
                     "expectedControlType": "Button",
@@ -50,7 +41,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "ZoomInOut",
+                    "action": "Scale",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -61,7 +52,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "SlowZoomActivator",
+                    "action": "SlowScaleActivator",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -72,7 +63,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "HorizontalRotation",
+                    "action": "Rotation",
                     "isComposite": true,
                     "isPartOfComposite": false
                 },
@@ -83,7 +74,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "HorizontalRotation",
+                    "action": "Rotation",
                     "isComposite": false,
                     "isPartOfComposite": true
                 },
@@ -94,7 +85,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "HorizontalRotation",
+                    "action": "Rotation",
                     "isComposite": false,
                     "isPartOfComposite": true
                 },
@@ -105,51 +96,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "HorizontalRotation",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
-                {
-                    "name": "Two Modifiers",
-                    "id": "8073ebb6-b87d-4c98-9339-c14132f13126",
-                    "path": "TwoModifiers",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "VerticalRotation",
-                    "isComposite": true,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "modifier1",
-                    "id": "d90f3ee9-011a-44d1-ab4a-6f4856c7d0ce",
-                    "path": "<Keyboard>/leftCtrl",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "VerticalRotation",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
-                {
-                    "name": "modifier2",
-                    "id": "4ab470fb-9313-4b9d-ae6c-70b6e425ec56",
-                    "path": "<Mouse>/rightButton",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "VerticalRotation",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
-                {
-                    "name": "binding",
-                    "id": "2ac65fbe-3c1c-4c40-b8da-eba56a56d8e5",
-                    "path": "<Pointer>/delta",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "VerticalRotation",
+                    "action": "Rotation",
                     "isComposite": false,
                     "isPartOfComposite": true
                 }

@@ -13,7 +13,8 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - NEAREST_NEIGHBOR
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - TRICUBIC_POST_CLASSIFICATION
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -34,7 +35,8 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AlphaCutoff: 1
+    - _AlphaCutoff: 0.99607843
+    - _MaxIterations: 512
     m_Colors:
     - _DensitiesTexSize: {r: 512, g: 512, b: 62, a: 0}
   m_BuildTextureStacks: []

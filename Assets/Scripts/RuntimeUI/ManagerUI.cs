@@ -16,6 +16,8 @@ namespace UnityCTVisualizer
         public VisualizationParametersUI m_VisualizationParamsUI;
         public TransferFunction1DUI m_TransferFunction1DUI;
 
+        public Vector3 m_VolumetricObjectPosition;
+
         public TF m_DefaultTF = TF.TF1D;
         public INTERPOLATION m_DefaultInterpolation = INTERPOLATION.NEAREST_NEIGHBOR;
 
@@ -33,7 +35,11 @@ namespace UnityCTVisualizer
         void OnDatasetLoad(VolumetricDataset volumetricDataset)
         {
             m_VolumetricDataset = volumetricDataset;
-            m_VolumetricObject = Instantiate<GameObject>(m_VolumetricObjectPrefab)
+            m_VolumetricObject = Instantiate<GameObject>(
+                    m_VolumetricObjectPrefab,
+                    position: m_VolumetricObjectPosition,
+                    rotation: Quaternion.identity
+                )
                 .GetComponent<VolumetricObject>();
             m_VolumetricObject.VolumetricDataset = volumetricDataset;
             // TODO: add the defaults in VisualizationParametersUI's Init method
