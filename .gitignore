@@ -84,3 +84,8 @@ Assets/UVDSDatasets/*
 
 # MacOS
 Assets/.DS_Store
+
+# venv
+venv/
+
+output/

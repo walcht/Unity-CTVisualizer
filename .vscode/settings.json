@@ -56,5 +56,6 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "Unity-Immersive-Analytics.sln"
+    "dotnet.defaultSolution": "Unity-Immersive-Analytics.sln",
+    "python.analysis.typeCheckingMode": "basic"
 }

@@ -7,18 +7,13 @@ import click
 class RawConverter(BaseConverter):
     def convert_dataset(self, dataset_dir_or_fp: str) -> UVDS:
         """Imports and converts RAW (.raw extension) dataset to Unity Volumetric DataSet (UVDS) format.
-        RAW files do not contain volume attributes in them such as width, height or depth, so when running
-        the uvds.py script, command line prompts will ask the user for these values.
+        RAW files do not contain volume attributes in them such as width, height or depth, therefore
+        when running the uvds.py script, command line prompts will ask the user for these values.
 
         Parameters
         ----------
         dataset_dir_or_fp : str
             absolute path to a dataset directory or a single file
-
-        Returns
-        -------
-        UVDS
-            Instance of a UVDS dataclass containing converted import data attributes
         """
         if os.path.isfile(dataset_dir_or_fp):
             endianness_options = ["L", "B"]

@@ -1,10 +1,12 @@
-using System;
-using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using SimpleFileBrowser;
+using System;
+using System.IO;
+using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Windows;
 
 namespace UnityCTVisualizer
 {
@@ -42,29 +44,34 @@ namespace UnityCTVisualizer
             // disable import button
             m_FileDialog.interactable = false;
             await FileBrowser.WaitForLoadDialog(
-                FileBrowser.PickMode.Files,
-                title: "Select a Unity Volumetric DataSet (UVDS) File",
+                FileBrowser.PickMode.Folders,
+                title: "Select a Unity Volumetric DataSet (UVDS) dataset directory",
                 loadButtonText: "Import Dataset"
             );
             if (FileBrowser.Success)
             {
-                // enable progress handler
-                m_ProgressHandler.gameObject.SetActive(true);
-                string datasetPath = FileBrowser.Result[0];
-                m_FilePath.text = datasetPath;
+                string dirPath = FileBrowser.Result[0];
+                m_FilePath.text = dirPath;
+                VolumetricDataset volumetricDataset;
+                try
+                {
+                    volumetricDataset = Importer.ImporterUVDSDataset(dirPath, m_ProgressHandler);
+                }
+                catch (FileLoadException)
+                {
+                    return;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                    return;
+                }
                 // TODO: make dataset importer work on bytes array for multiplatform support
                 // byte[] bytes = FileBrowserHelpers.ReadBytesFromFile(datasetPath);
-                VolumetricDataset volumetricDataset =
-                    ScriptableObject.CreateInstance<VolumetricDataset>();
-                await Task.Run(
-                    () => Importer.ImportUVDS(datasetPath, volumetricDataset, m_ProgressHandler)
-                );
                 OnDatasetLoad?.Invoke(volumetricDataset);
 #if DEBUG_UI
                 Debug.Log("Dataset loaded successfully");
 #endif
-                // disable progress handler
-                m_ProgressHandler.gameObject.SetActive(false);
                 // enable import button again
                 m_FileDialog.interactable = true;
                 return;

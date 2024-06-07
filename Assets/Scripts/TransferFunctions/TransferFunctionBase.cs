@@ -36,8 +36,8 @@ namespace UnityCTVisualizer
 
         public ControlPoint(P position, T value)
         {
-            this.Position = position;
-            this.Value = value;
+            Position = position;
+            Value = value;
         }
     }
 

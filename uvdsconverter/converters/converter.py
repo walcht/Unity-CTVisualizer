@@ -1,138 +1,16 @@
 from __future__ import annotations
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
-from io import BufferedIOBase
-from typing import IO, Any, Dict, List, Tuple
-import numpy as np
-from numpy.typing import NDArray
+from io import TextIOWrapper
+from typing import Any, Tuple
 import logging
+import math
 import os
-import re
-import zipfile
 
 
-@dataclass
-class UVDS:
-    """Unity Volumetric DataSet (UVDS) data format"""
+class DatasetNotImported(Exception):
+    """Raised when an operation that requires a dataset to be imported is called before importing a dataset"""
 
-    imagewidth: np.uint16 = np.uint16(np.iinfo(np.uint16).max)  # crucial
-    imageheight: np.uint16 = np.uint16(np.iinfo(np.uint16).max)  # crucial
-    nbrslices: np.uint16 = np.uint16(np.iinfo(np.uint16).max)  # crucial
-    voxeldimX: np.float32 = np.float32(-1)  # optional
-    voxeldimY: np.float32 = np.float32(-1)  # optional
-    voxeldimZ: np.float32 = np.float32(-1)  # optional
-    eulerrotX: np.float32 = np.float32(0)  # optional
-    eulerrotY: np.float32 = np.float32(0)  # optional
-    eulerrotZ: np.float32 = np.float32(0)  # optional
-    minDensity: np.float16 = np.finfo(np.float16).max  # optional
-    maxDensity: np.float16 = np.finfo(np.float16).min  # optional
-    densities: NDArray[np.float16] = np.array([], dtype=np.float16)  # crucial
-
-    def write_binary_stream(self, uvds_stream: BufferedIOBase | IO[bytes]) -> None:
-        """Writes UVDS binary to a buffered raw IO steam
-
-        Parameters
-        ----------
-        uvds_stream : BufferedIOBase
-            stream to which the binary UVDS will be written
-        """
-        uvds_stream.write(self.imagewidth.tobytes())
-        uvds_stream.write(self.imageheight.tobytes())
-        uvds_stream.write(self.nbrslices.tobytes())
-        uvds_stream.write(self.voxeldimX.tobytes())
-        uvds_stream.write(self.voxeldimY.tobytes())
-        uvds_stream.write(self.voxeldimZ.tobytes())
-        uvds_stream.write(self.eulerrotX.tobytes())
-        uvds_stream.write(self.eulerrotY.tobytes())
-        uvds_stream.write(self.eulerrotZ.tobytes())
-        uvds_stream.write(self.minDensity.tobytes())
-        uvds_stream.write(self.maxDensity.tobytes())
-        uvds_stream.write(self.densities.tobytes())
-
-    def write_binary(self, uvds_fp: str, compress: bool) -> None:
-        """Write UVDS binary data to a provided filepath
-
-        Parameters
-        ----------
-        uvds_fp : str
-            absolute filepath to where the binary data is going to be written. Basename should end with the
-            .uvds extension. If that is not the case, then whatever extension that was provided (if any) will
-            be replaced with a .uvds extension.
-        compress: bool
-            specifies whether to use compression or not
-        Raises
-        ------
-        FileExistsError
-            if provided filepath already exists
-        """
-        if not uvds_fp.endswith(".uvds"):
-            logging.warning(
-                f"provided uvds filepath's basename: {os.path.basename(uvds_fp)} should end with .uvds"
-            )
-            uvds_fp = re.sub(r"\..*", ".uvds", uvds_fp)
-            logging.info("added .uvds extension to provided filepath")
-        if os.path.isfile(uvds_fp):
-            raise FileExistsError(f"provided uvds output path: {uvds_fp} already exists.")
-        if compress:
-            logging.info(f"writing binary UVDS data to: {uvds_fp}.zip ...")
-            with zipfile.ZipFile(f"{uvds_fp}.zip", "x", compression=zipfile.ZIP_DEFLATED) as zip_file:
-                with zip_file.open(os.path.basename(uvds_fp), "w") as zip_file_inside:
-                    self.write_binary_stream(zip_file_inside)
-            logging.info(f"UVDS binary available at: {uvds_fp}.zip")
-            return
-        logging.info(f"writing binary UVDS data to: {uvds_fp} ...")
-        with open(uvds_fp, "ab") as output:
-            self.write_binary_stream(output)
-        logging.info(f"UVDS binary available at: {uvds_fp}")
-
-    @staticmethod
-    def serialize_binary_stream(uvds_stream: BufferedIOBase) -> UVDS:
-        """Serializes (i.e., converts input data into a Python UVDS class instance) UVDS binary data provided
-        through a raw IO stream.
-
-        Parameters
-        ----------
-        uvds_stream : BufferedIOBase
-            buffered raw IO stream containing UVDS binary data
-
-        Returns
-        -------
-        UVDS
-            Instance of UVDS dataclass
-        """
-        return UVDS(
-            imagewidth=np.frombuffer(uvds_stream.read(2), dtype=np.uint16, count=1)[0],
-            imageheight=np.frombuffer(uvds_stream.read(2), dtype=np.uint16, count=1)[0],
-            nbrslices=np.frombuffer(uvds_stream.read(2), dtype=np.uint16, count=1)[0],
-            voxeldimX=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
-            voxeldimY=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
-            voxeldimZ=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
-            eulerrotX=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
-            eulerrotY=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
-            eulerrotZ=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
-            minDensity=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
-            maxDensity=np.frombuffer(uvds_stream.read(4), dtype=np.float32, count=1)[0],
-            densities=np.frombuffer(uvds_stream.read(), dtype=np.float32)[0],
-        )
-
-    @staticmethod
-    def serialize_binary(uvds_fp: str) -> UVDS:
-        """Serializes (i.e., converts input data into a Python UVDS class instance) binary UVDS data in a
-        provided filepath.
-
-        Parameters
-        ----------
-        uvds_fp : str
-            filepath to binary UVDS data
-
-        Returns
-        -------
-        UVDS
-            Instance of UVDS dataclass
-        """
-        with open(uvds_fp, "rb") as binary_stream:
-            result = UVDS.serialize_binary_stream(binary_stream)
-            return result
+    pass
 
 
 class UnsupportedDatasetFormatException(Exception):
@@ -143,33 +21,150 @@ class UnsupportedDatasetFormatException(Exception):
 
 class BaseConverterMetaclass(type, metaclass=ABCMeta):
     """Converter metaclass (i.e., class for creating converter classes). The main purpose of this metaclass
-    is to add references to the BaseConverter for every defined class that inherits from BaseConverter."""
+    is to add references to the BaseConverter for every defined class that inherits from BaseConverter.
+    """
 
-    def __new__(cls, clsname: str, bases: Tuple[type], namespaces: Dict[str, Any]):
+    def __new__(cls, clsname: str, bases: Tuple[type], namespaces: dict[str, Any]):
         newly_created_cls = super().__new__(cls, clsname, bases, namespaces)
         for base_cls in bases:
             # store reference to this converter class if it inherits from BaseConverter
             if base_cls == BaseConverter:
-                BaseConverter.converters.append(newly_created_cls)
+                BaseConverter.converters.append(newly_created_cls)  # type: ignore
         return newly_created_cls
 
 
 class BaseConverter(metaclass=BaseConverterMetaclass):
-    converters: List[type] = []
+    """Base class for CT (or MRI) datasets convertion to UVDS format"""
+
+    converters: list[type[BaseConverter]] = []
+
+    def __init__(self) -> None:
+        # UVDS metadata attributes
+        self.originalimagewidth: int = -1
+        self.originalimageheight: int = -1
+        self.originalnbrslices: int = -1
+        self.bricksize: int = -1
+        self.nbrbricksX: int = -1
+        self.nbrbricksY: int = -1
+        self.nbrbricksZ: int = -1
+        self.totalnbrbricks: int = -1
+        self.resolutionlevels: int = -1
+        self.colordepth: int = -1
+        self.lz4compressed: bool = True
+        self.voxeldimX: float = 1
+        self.voxeldimY: float = 1
+        self.voxeldimZ: float = 1
+        self.eulerrotX: float = 0
+        self.eulerrotY: float = 0
+        self.eulerrotZ: float = 0
+        self.densitymin: float = -1
+        self.densitymax: float = -1
+
+    def write_metadata_stream(self, text_stream: TextIOWrapper) -> None:
+        """Writes UVDS metadata text to a text (string) stream
+
+        Parameters
+        ----------
+        text_stream: TextIOWrapper
+            string stream to which the UVDS metadata text will be written
+        """
+        if (
+            self.originalimageheight < 0
+            or self.originalimagewidth < 0
+            or self.originalnbrslices < 0
+        ):
+            raise DatasetNotImported(
+                "attempt at writing UVDS metadata before importing a dataset"
+            )
+        text_stream.write(f"originalimagewidth={self.originalimagewidth}\n")
+        text_stream.write(f"originalimageheight={self.originalimageheight}\n")
+        text_stream.write(f"originalnbrslices={self.originalnbrslices}\n")
+        text_stream.write(f"bricksize={self.bricksize}\n")
+        text_stream.write(f"nbrbricksX={self.nbrbricksX}\n")
+        text_stream.write(f"nbrbricksY={self.nbrbricksY}\n")
+        text_stream.write(f"nbrbricksZ={self.nbrbricksZ}\n")
+        text_stream.write(f"totalnbrbricks={self.totalnbrbricks}\n")
+        text_stream.write(f"resolutionlevels={self.resolutionlevels}\n")
+        text_stream.write(f"colordepth={self.colordepth}\n")
+        text_stream.write(f"lz4compressed={1 if self.lz4compressed else 0}\n")
+        text_stream.write(f"voxeldimX={self.voxeldimX}\n")
+        text_stream.write(f"voxeldimY={self.voxeldimY}\n")
+        text_stream.write(f"voxeldimZ={self.voxeldimZ}\n")
+        text_stream.write(f"eulerrotX={self.eulerrotX}\n")
+        text_stream.write(f"eulerrotY={self.eulerrotY}\n")
+        text_stream.write(f"eulerrotZ={self.eulerrotZ}")
+        text_stream.write(f"densitymin={self.densitymin}")
+        text_stream.write(f"densitymax={self.densitymax}")
+
+    def write_metadata(self, output_dir: str) -> None:
+        """Writes UVDS metadata.txt file to provided output directory
+
+        Parameters
+        ----------
+        output_dir: str
+            absolute directory path to where the `metadata.txt` is going to be written.
+            `output_dir` is expected to be empty otherwise an exception will be raised.
+
+        Raises
+        ------
+        NotADirectoryError
+            if provided directory does not exist
+        """
+        if not os.path.isdir(output_dir):
+            raise NotADirectoryError(
+                f"provided metadata output directory path: {output_dir} does not exist."
+            )
+        with open(os.path.join(output_dir, "metadata.txt"), "wt") as ss:
+            self.write_metadata_stream(ss)
 
     @abstractmethod
-    def convert_dataset(self, dataset_dir_or_fp: str) -> UVDS:
-        """Imports and converts CT (or MRI) dataset to Unity Volumetric DataSet (UVDS) format
+    def write_binary_chuncks(self, directory_path: str, basename: str = "") -> None:
+        """Write UVDS binary chuncks data to a provided directory path"""
+        ...
+
+    def get_nbrbricks(
+        self,
+        width: int,
+        height: int,
+        nbrslices: int,
+        bricksize: int,
+    ) -> tuple[int, int, int]:
+        """Calculates the number of bricks for each dimension based on dataset dimensions
+        and bricksize
+
+        Parameters
+        ----------
+        width : int
+        height : int
+        nbrslices : int
+        bricksize : int
+            should be a power of two
+
+        Returns
+        -------
+        tuple[int, int, int]
+            [nbrbricksX, nbrbricksY, nbrbricksZ]
+        """
+        return (
+            math.ceil(width / bricksize),  # nbrbricksX
+            math.ceil(height / bricksize),  # nbrbricksY
+            math.ceil(nbrslices / bricksize),  # nbrbricksZ
+        )
+
+    @abstractmethod
+    def import_dataset(
+        self,
+        dataset_dir_or_fp: str,
+        bricksize: int = 32,
+        resolution_levels: int = 0,
+        compress: bool = True,
+    ) -> None:
+        """Imports the CT (or MRI) dataset to Unity Volumetric DataSet (UVDS) format
 
         Parameters
         ----------
         dataset_dir_or_fp : str
             absolute path to a dataset directory or a single file
-
-        Returns
-        -------
-        UVDS
-            Instance of a UVDS dataclass containing converted import data attributes
         """
         ...
 

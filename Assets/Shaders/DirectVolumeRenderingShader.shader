@@ -2,6 +2,16 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
 {
     Properties
 	{
+        // Texture3D in Unity has a resolution limit of: 2048 * 2048 * 2048
+        // assuming texture format is RHalf (i.e., 16 bit float) that is 16GBs of VRAM memory
+        // currently it is assumed that the maximum VRAM of GPU is 16GBs (to avoid having
+        // more that a single densities 3D texture)
+        //
+        // But what is we have a 16 * 16 * 33 554 432? This is still within the 16GBs limit
+        // but the original texture has to be reshaped to fit within 2048^3 3D texture
+        //
+        // If such re-shaping occurs - TEXTURE_RESHAPED_ON is set and some additional runtime
+        // cost in incured (for translating the coordinates)
 	    [NoScaleOffset] _Densities("Densities", 3D) = "" {}
         [NoScaleOffset] _TFColors("Transfer Function Colors Texture", 2D) = "" {}
 		_AlphaCutoff("Opacity Cutoff", Range(0.0, 1.0)) = 0.95
@@ -18,7 +28,7 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
 		Pass
 		{
 		    CGPROGRAM
-            #pragma multi_compile NEAREST_NEIGHBOR TRILINEAR_PRE_CLASSIFICATION TRILINEAR_POST_CLASSIFICATION
+            #pragma multi_compile TEXTURE_RESHAPED_OFF TEXTURE_RESHAPED_ON
 			#pragma vertex vert
 			#pragma fragment frag
             #include "UnityCG.cginc"
@@ -122,88 +132,7 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                         V_111 * v.x * v.y * v.z;
             
             }
-            
-            // TODO:    this piece of junk is unoptimized af. Please improve this garbage. Nvm I think this
-            //          will always yield worse results
-            // NOTE: For more accurate interpolations, we convert color from RGB space to HSL
-            /// <summary>
-            ///     Same as translateTrilinear except that colors sampled from the provided transfer function
-            ///     are sampled instead of densities. This function is even more expensive because double the
-            ///     sampling operations are used (16 vs. 8)
-            /// </summary>
-            /// <remark>
-            ///     
-            /// </remark>
-            float4 interpolateTrilinearColor(sampler3D tex, float3 texCoord, float3 texSize)
-            {
-            	float3 coord_grid = texCoord * texSize - 0.5;
-            	float3 index = floor(coord_grid);
-                // v is value withing the 8 vertices (cube) is used for interpolation
-            	float3 v = coord_grid - index;
-                float3 one_minus_v = 1.0f - v;
-                float3 one_over_texsize = 1.0f / texSize;
-                // the values at the vertices are needed. Since this is an AABB, only the 2 corners c0 and c1
-                // need to be determined
-                float3 c0 = one_over_texsize * (index + 0.5f);
-                float3 c1 = one_over_texsize * (index + 1.5f);
-                // do the linear interpolation in HSV space
-            	float4 V_000 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c0, 0.0f))));
-            	float4 V_100 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c1.x, c0.y, c0.z, 0.0f))));
-            	float4 V_010 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c0.x, c1.y, c0.z, 0.0f))));
-            	float4 V_110 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c1.x, c1.y, c0.z, 0.0f))));
-            	float4 V_001 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c0.x, c0.y, c1.z, 0.0f))));
-            	float4 V_101 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c1.x, c0.y, c1.z, 0.0f))));
-            	float4 V_011 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c0.x, c1.y, c1.z, 0.0f))));
-            	float4 V_111 = rgb2hsv(sampleTF1DColor(tex3Dlod(tex, float4(c1, 0.0f))));
-                // then convert back to RGB space
-                return  hsv2rgb(
-                            V_000 * one_minus_v.x * one_minus_v.y * one_minus_v.z +
-                            V_100 * v.x * one_minus_v.y * one_minus_v.z +
-                            V_010 * one_minus_v.x * v.y * one_minus_v.z +
-                            V_001 * one_minus_v.x * one_minus_v.y * v.z +
-                            V_101 * v.x * one_minus_v.y * v.z +
-                            V_011 * one_minus_v.x * v.y * v.z +
-                            V_110 * v.x * v.y * one_minus_v.z +
-                            V_111 * v.x * v.y * v.z
-                        );
-            }
 
-            /// <summary>
-            ///     Tricubic interpolation. Use this for pre-classification interpolation (i.e.,
-            ///     interpolate density then classify using TF lookup texture. This method is more
-            ///     expensive than interpolateTrilinear.
-            /// </summary>
-            float4 interpolateTricubic(sampler3D tex, float3 texCoord, float3 texSize)
-            {
-            	// shift the coordinate from [0,1] to [-0.5, texSize-0.5]
-            	float3 coord_grid = texCoord * texSize - 0.5f;
-            	float3 index = floor(coord_grid);
-                // v is value withing the 8 vertices (cube) is used for interpolation
-            	float3 v = coord_grid - index;
-                float3 one_minus_v = 1.0f - v;
-                float3 one_over_texsize = 1.0f / texSize;
-                // the values at the vertices are needed. Since this is an AABB, only the 2 corners c0 and c1
-                // need to be determined
-                float3 c0 = one_over_texsize * (index + 0.5f);
-                float3 c1 = one_over_texsize * (index + 1.5f);
-            	float4 V_000 = tex3Dlod(tex, float4(c0, 0.0f));
-            	float4 V_100 = tex3Dlod(tex, float4(c1.x, c0.y, c0.z, 0.0f));
-            	float4 V_010 = tex3Dlod(tex, float4(c0.x, c1.y, c0.z, 0.0f));
-            	float4 V_110 = tex3Dlod(tex, float4(c1.x, c1.y, c0.z, 0.0f));
-            	float4 V_001 = tex3Dlod(tex, float4(c0.x, c0.y, c1.z, 0.0f));
-            	float4 V_101 = tex3Dlod(tex, float4(c1.x, c0.y, c1.z, 0.0f));
-            	float4 V_011 = tex3Dlod(tex, float4(c0.x, c1.y, c1.z, 0.0f));
-            	float4 V_111 = tex3Dlod(tex, float4(c1, 0.0f));
-                return  V_000 * one_minus_v.x * one_minus_v.y * one_minus_v.z +
-                        V_100 * v.x * one_minus_v.y * one_minus_v.z +
-                        V_010 * one_minus_v.x * v.y * one_minus_v.z +
-                        V_001 * one_minus_v.x * one_minus_v.y * v.z +
-                        V_101 * v.x * one_minus_v.y * v.z +
-                        V_011 * one_minus_v.x * v.y * v.z +
-                        V_110 * v.x * v.y * one_minus_v.z +
-                        V_111 * v.x * v.y * v.z;
-            
-            }
             
             /// <summary>
             ///     Axis-Aligned Bounding Box (AABB) box. An AABB only needs
@@ -293,26 +222,15 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                 float4 accm_color = float4(0.0f, 0.0f, 0.0f, 0.0f);
                 float3 accm_ray = start;
                 // TODO:    improve sampling loop (maybe use unroll with outside check?)
-                for (int iter = 0; iter < num_iterations; iter++)
+                for (int iter = 0; iter < num_iterations; ++iter)
                 {
                     // don't forget to transition from [-0.5, 0.5] range to [0.0, 1.0]
                     float sampled_density;
                     float4 src;
-                    if (NEAREST_NEIGHBOR)
-                    {
-                        sampled_density = tex3Dlod(_Densities, float4(accm_ray + 0.5f, 0.0f)).r;
-                        src = sampleTF1DColor(sampled_density);
-                    }
-                    else if (TRILINEAR_PRE_CLASSIFICATION)
-                    {
-                        sampled_density = interpolateTrilinear(_Densities, accm_ray + 0.5f, _DensitiesTexSize);
-                        src = sampleTF1DColor(sampled_density);
-                    }
-                    // TODO: is this interpolation correct? Why is it slow af?
-                    else if (TRILINEAR_POST_CLASSIFICATION) 
-                    {
-                        src = interpolateTrilinearColor(_Densities, accm_ray + 0.5f, _DensitiesTexSize);
-                    }
+                    // for NEAREST_NEIGHBOR neighbor, use this:
+                    // sampled_density = tex3Dlod(_Densities, float4(accm_ray + 0.5f, 0.0f)).r;
+                    sampled_density = interpolateTrilinear(_Densities, accm_ray + 0.5f, _DensitiesTexSize);
+                    src = sampleTF1DColor(sampled_density);
                     // blending
                     // TODO:    is direct sampling of alpha the correct method? Check what this is doing:
                     //          https://github.com/LDeakin/VkVolume/blob/master/shaders/volume_render.frag

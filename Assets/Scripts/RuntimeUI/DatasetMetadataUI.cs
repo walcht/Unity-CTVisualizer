@@ -45,16 +45,16 @@ namespace UnityCTVisualizer
         /// Call this before enabling this UI or during its lifetime to update it.
         /// </summary>
         /// <param name="uvdsDataset">An imported UVDS dataset</param>
-        public void Init(IUVDS uvdsDataset)
+        public void Init(IUVDSMetadata metadata)
         {
-            m_VolumeWidth.text = uvdsDataset.ImageWidth.ToString();
-            m_VolumeHeight.text = uvdsDataset.ImageHeight.ToString();
-            m_NumberSlices.text = uvdsDataset.NbrSlices.ToString();
-            m_VolumeScaleX.text = uvdsDataset.Scale.x.ToString("0.00");
-            m_VolumeScaleY.text = uvdsDataset.Scale.y.ToString("0.00");
-            m_VolumeScaleZ.text = uvdsDataset.Scale.z.ToString("0.00");
-            m_DensityMin.text = uvdsDataset.MinDensity.ToString("0.00");
-            m_DensityMax.text = uvdsDataset.MaxDensity.ToString("0.00");
+            m_VolumeWidth.text = metadata.ImageWidth.ToString();
+            m_VolumeHeight.text = metadata.ImageHeight.ToString();
+            m_NumberSlices.text = metadata.NbrSlices.ToString();
+            m_VolumeScaleX.text = metadata.Scale.x.ToString("0.00");
+            m_VolumeScaleY.text = metadata.Scale.y.ToString("0.00");
+            m_VolumeScaleZ.text = metadata.Scale.z.ToString("0.00");
+            m_DensityMin.text = metadata.DensityMin.ToString("0.00");
+            m_DensityMax.text = metadata.DensityMax.ToString("0.00");
         }
     }
 }

@@ -124,7 +124,7 @@ namespace UnityCTVisualizer
 
         public void OnDrag(PointerEventData eventData)
         {
-            SetPosition(m_ControlPoint.Position + (eventData.delta.x / (float)Screen.width));
+            SetPosition(m_ControlPoint.Position + (eventData.delta.x / Screen.width));
         }
 
         public void OnPointerClick(PointerEventData eventData)

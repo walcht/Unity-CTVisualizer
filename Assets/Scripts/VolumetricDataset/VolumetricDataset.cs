@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using K4os.Compression.LZ4;
 
 namespace UnityCTVisualizer
 {
@@ -10,10 +11,37 @@ namespace UnityCTVisualizer
         fileName = "volumetric_dataset",
         menuName = "UnityCTVisualizer/VolumetricDataset"
     )]
-    public class VolumetricDataset : ScriptableObject, IUVDS
+    public class VolumetricDataset : ScriptableObject, IUVDSMetadata
     {
         public event Action<Texture2D> OnDensitiesFreqChange;
         public event Action<Texture3D> OnDensitiesChange;
+
+
+
+
+        public int OriginalImageWidth { get; set; }
+        public int OriginalImageHeight { get; set; }
+        public int OriginalNbrSlices { get; set; }
+        public int ImageWidth { get; set; }  // multiple of bricksize
+        public int ImageHeight { get; set; }  // multiple of bricksize
+        public int NbrSlices { get; set; }  // multiple of bricksize
+        public int BrickSize { get; set; }
+        public int BrickSizeBytes { get; set; }
+        public int NbrBricksX { get; set; }
+        public int NbrBricksY { get; set; }
+        public int NbrBricksZ { get; set; }
+        public int TotalNbrBricks { get; set; }
+        public int ResolutionLevels { get; set; }
+        public ColorDepth ColourDepth { get; set; }
+        public bool Lz4Compressed { get; set; }
+        public Vector3 Scale { get; set; }
+        public Vector3 EulerRotation { get; set; }
+        public float DensityMin { get; set; }
+        public float DensityMax { get; set; }
+
+
+
+
 
         [SerializeField]
         string m_DatasetPath;
@@ -21,62 +49,6 @@ namespace UnityCTVisualizer
         {
             get => m_DatasetPath;
             set { m_DatasetPath = value; }
-        }
-
-        [SerializeField]
-        ushort m_ImageWidth;
-        public ushort ImageWidth
-        {
-            get => m_ImageWidth;
-            set { m_ImageWidth = value; }
-        }
-
-        [SerializeField]
-        ushort m_ImageHeight;
-        public ushort ImageHeight
-        {
-            get => m_ImageHeight;
-            set { m_ImageHeight = value; }
-        }
-
-        [SerializeField]
-        ushort m_NbrSlices;
-        public ushort NbrSlices
-        {
-            get => m_NbrSlices;
-            set { m_NbrSlices = value; }
-        }
-
-        [SerializeField]
-        Vector3 m_Scale;
-        public Vector3 Scale
-        {
-            get => m_Scale;
-            set { m_Scale = value; }
-        }
-
-        [SerializeField]
-        Vector3 m_EulerRotation;
-        public Vector3 EulerRotation
-        {
-            get => m_EulerRotation;
-            set { m_EulerRotation = value; }
-        }
-
-        [SerializeField]
-        float m_MinDensity = float.NegativeInfinity;
-        public float MinDensity
-        {
-            get => m_MinDensity;
-            set { m_MinDensity = value; }
-        }
-
-        [SerializeField]
-        float m_MaxDensity = float.PositiveInfinity;
-        public float MaxDensity
-        {
-            get => m_MaxDensity;
-            set { m_MaxDensity = value; }
         }
 
         [SerializeField]
@@ -179,7 +151,7 @@ namespace UnityCTVisualizer
                 }
             }
             int freqMin = frequencies.Min();
-            float range = (float)(frequencies.Max() - freqMin);
+            float range = frequencies.Max() - freqMin;
             if (SystemInfo.SupportsTextureFormat(TextureFormat.RHalf))
             {
                 ushort[] normalizedFrequencies = new ushort[HISTOGRAM_BINS];
@@ -288,7 +260,7 @@ namespace UnityCTVisualizer
             }
             if (exportPath == null)
             {
-                System.DateTime centuryBegin = new System.DateTime(2024, 1, 1);
+                System.DateTime centuryBegin = new(2024, 1, 1);
                 System.DateTime currentDate = System.DateTime.Now;
                 long elapsedTicks = (long)((currentDate.Ticks - centuryBegin.Ticks) / 10000.0f);
                 exportPath =
@@ -354,6 +326,19 @@ namespace UnityCTVisualizer
                     false
                 );
             }
+        }
+
+
+        public byte[] ImportChunk(uint chunkId)
+        {
+            byte[] data = File.ReadAllBytes(this.volumeBricksFilePaths[chunkId]);
+            if (this.Lz4Compressed)
+            {
+                byte[] decompressedData = new byte[this.BrickSizeBytes];
+                LZ4Codec.Decode(source: data, target: decompressedData);
+                return decompressedData;
+            }
+            return data;
         }
     }
 }

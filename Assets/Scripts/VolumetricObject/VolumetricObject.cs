@@ -35,9 +35,9 @@ namespace UnityCTVisualizer
                 // request densities 3D texture generation
                 m_VolumeDataset.TryGenerateDensitiesTexture();
                 // scale mesh to match correct dimensions of the original volumetric data
-                this.GetComponent<Transform>().localScale = m_VolumeDataset.Scale;
+                GetComponent<Transform>().localScale = m_VolumeDataset.Scale;
                 // rotate mesh according to provided rotation
-                this.GetComponent<Transform>().localRotation = Quaternion.Euler(
+                GetComponent<Transform>().localRotation = Quaternion.Euler(
                     m_VolumeDataset.EulerRotation
                 );
             }
