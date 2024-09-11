@@ -4,14 +4,9 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace UnityCTVisualizer
-{
+namespace UnityCTVisualizer {
     [RequireComponent(typeof(RectTransform), typeof(Canvas))]
-    public class TransferFunction1DUI : MonoBehaviour
-    {
-#if !DEBUG_UI
-        [HideInInspector]
-#endif
+    public class TransferFunction1DUI : MonoBehaviour {
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////// IN-CURRENT or IN-CHILDREN REFERENCES //////////////////////////////
@@ -101,8 +96,7 @@ namespace UnityCTVisualizer
         Dictionary<int, ColorControlPointUI> m_ColorControlPoints = new();
         Dictionary<int, AlphaControlPointUI> m_AlphaControlPoints = new();
 
-        void Awake()
-        {
+        void Awake() {
             m_RemoveAlpha.onClick.AddListener(OnRemoveAlphaControlPoint);
             m_RemoveColor.onClick.AddListener(OnRemoveColorControlPoint);
             m_ClearColors.onClick.AddListener(OnClearColorsClick);
@@ -116,21 +110,18 @@ namespace UnityCTVisualizer
         public void Init(
             TransferFunction1D transferFunctionData,
             VolumetricDataset volumetricDataset
-        )
-        {
+        ) {
             m_TransferFunctionData = transferFunctionData;
             m_VolumetricDataset = volumetricDataset;
             m_ColorControlPoints.Clear();
             // synchronize control points UI array with underlying transfer function data
-            foreach (var colorCpID in m_TransferFunctionData.ColorControlPointIDs())
-            {
+            foreach (var colorCpID in m_TransferFunctionData.ColorControlPointIDs()) {
                 AddColorControlPointInternal(
                     m_TransferFunctionData.GetColorControlPointAt(colorCpID),
                     colorCpID
                 );
             }
-            foreach (var alphaCpID in m_TransferFunctionData.AlphaControlPointIDs())
-            {
+            foreach (var alphaCpID in m_TransferFunctionData.AlphaControlPointIDs()) {
                 AddAlphaControlPointInternal(
                     m_TransferFunctionData.GetAlphaControlPointAt(alphaCpID),
                     alphaCpID
@@ -145,23 +136,19 @@ namespace UnityCTVisualizer
                 UpdateCurrAlphaControlPointID(m_AlphaControlPoints.Keys.First());
             else
                 UpdateCurrAlphaControlPointID(-1);
-            m_TransferFunctionData.TransferFunctionTexChange += OnTFTexChange;
+            m_TransferFunctionData.TFColorsLookupTexChange += OnTFTexChange;
             m_TransferFunctionData.TryUpdateColorLookupTexture();
-            // subscribe to density frequencies change (for histogram texture)
-            m_VolumetricDataset.OnDensitiesFreqChange += OnDensitiesFreqChange;
             // initialize histogram shader properties and request histogram texture
             OnAlphaControlPointDataChange();
             m_VolumetricDataset.TryUpdateDensityFreqTexture();
         }
 
-        void AddColorControlPoint(ControlPoint<float, Color> cp)
-        {
+        void AddColorControlPoint(ControlPoint<float, Color> cp) {
             int newCpID = m_TransferFunctionData.AddColorControlPoint(cp);
             AddColorControlPointInternal(cp, newCpID);
         }
 
-        void AddColorControlPointInternal(ControlPoint<float, Color> cp, int cpID)
-        {
+        void AddColorControlPointInternal(ControlPoint<float, Color> cp, int cpID) {
             var newCp = Instantiate(
                     m_ColorControlPointUIPrefab,
                     parent: m_ColorGradientControlRange
@@ -173,14 +160,12 @@ namespace UnityCTVisualizer
             m_ColorControlPoints.Add(cpID, newCp);
         }
 
-        void AddAlphaControlPoint(ControlPoint<float, float> cp)
-        {
+        void AddAlphaControlPoint(ControlPoint<float, float> cp) {
             int newCpID = m_TransferFunctionData.AddAlphaControlPoint(cp);
             AddAlphaControlPointInternal(cp, newCpID);
         }
 
-        void AddAlphaControlPointInternal(ControlPoint<float, float> cp, int cpID)
-        {
+        void AddAlphaControlPointInternal(ControlPoint<float, float> cp, int cpID) {
             var newCp = Instantiate(m_AlphaControlPointUIPrefab, parent: m_HistogramTransform)
                 .GetComponent<AlphaControlPointUI>();
             newCp.Init(cpID, cp);
@@ -189,10 +174,8 @@ namespace UnityCTVisualizer
             m_AlphaControlPoints.Add(cpID, newCp);
         }
 
-        void UpdateCurrColorControlPointID(int newId)
-        {
-            if (newId < 0)
-            {
+        void UpdateCurrColorControlPointID(int newId) {
+            if (newId < 0) {
                 m_CurrColorControlPointID = -1;
                 m_RemoveColor.interactable = false;
                 m_ColorPicker.SetInteractiveness(false);
@@ -204,10 +187,8 @@ namespace UnityCTVisualizer
             m_ColorPicker.SetInteractiveness(true);
         }
 
-        void UpdateCurrAlphaControlPointID(int newId)
-        {
-            if (newId < 0)
-            {
+        void UpdateCurrAlphaControlPointID(int newId) {
+            if (newId < 0) {
                 m_CurrAlphaControlPointID = -1;
                 m_RemoveAlpha.interactable = false;
                 return;
@@ -216,10 +197,8 @@ namespace UnityCTVisualizer
             m_RemoveAlpha.interactable = true;
         }
 
-        void OnEnable()
-        {
-            if (m_TransferFunctionData == null)
-            {
+        void OnEnable() {
+            if (m_TransferFunctionData == null) {
 #if DEBUG_UI
                 Debug.LogError(
                     "Transfer Function data should be supplied (can be done through editor)."
@@ -231,20 +210,16 @@ namespace UnityCTVisualizer
             }
         }
 
-        void OnDisable()
-        {
-            m_TransferFunctionData.TransferFunctionTexChange -= OnTFTexChange;
-            m_VolumetricDataset.OnDensitiesFreqChange -= OnDensitiesFreqChange;
+        void OnDisable() {
+            m_TransferFunctionData.TFColorsLookupTexChange -= OnTFTexChange;
         }
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////// LISTENERS /////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        void OnRemoveAlphaControlPoint()
-        {
-            if (m_CurrAlphaControlPointID == -1)
-            {
+        void OnRemoveAlphaControlPoint() {
+            if (m_CurrAlphaControlPointID == -1) {
                 Debug.LogError(
                     "No alpha control point is currently selected."
                         + " This alpha control point remove handler should not have been active!"
@@ -256,20 +231,16 @@ namespace UnityCTVisualizer
             m_AlphaControlPoints.Remove(m_CurrAlphaControlPointID);
             // destroy UI element (no need to unsubscribe)
             Destroy(cpToRemove.gameObject);
-            if (m_AlphaControlPoints.Count == 0)
-            {
+            if (m_AlphaControlPoints.Count == 0) {
                 m_TransferFunctionData.ClearAlphaControlPoints();
                 // ClearAlphaControlPoints adds new default alpha control point(s). We have to synchronize
-                foreach (var alphaCpID in m_TransferFunctionData.AlphaControlPointIDs())
-                {
+                foreach (var alphaCpID in m_TransferFunctionData.AlphaControlPointIDs()) {
                     AddAlphaControlPointInternal(
                         m_TransferFunctionData.GetAlphaControlPointAt(alphaCpID),
                         alphaCpID
                     );
                 }
-            }
-            else
-            {
+            } else {
                 // remove alpha from underlying Transfer function data
                 m_TransferFunctionData.RemoveAlphaControlPoint(m_CurrAlphaControlPointID);
             }
@@ -279,10 +250,8 @@ namespace UnityCTVisualizer
             OnAlphaControlPointDataChange();
         }
 
-        void OnRemoveColorControlPoint()
-        {
-            if (m_CurrColorControlPointID == -1)
-            {
+        void OnRemoveColorControlPoint() {
+            if (m_CurrColorControlPointID == -1) {
                 Debug.LogError(
                     "No color control point is currently selected."
                         + " This color control point remove handler should not have been active!"
@@ -294,20 +263,16 @@ namespace UnityCTVisualizer
             m_ColorControlPoints.Remove(m_CurrColorControlPointID);
             // destroy UI element (no need to unsubscribe)
             Destroy(cpToRemove.gameObject);
-            if (m_ColorControlPoints.Count == 0)
-            {
+            if (m_ColorControlPoints.Count == 0) {
                 m_TransferFunctionData.ClearColorControlPoints();
                 // ClearColorControlPoints adds new default color control point(s). We have to synchronize
-                foreach (var colorCpID in m_TransferFunctionData.ColorControlPointIDs())
-                {
+                foreach (var colorCpID in m_TransferFunctionData.ColorControlPointIDs()) {
                     AddColorControlPointInternal(
                         m_TransferFunctionData.GetColorControlPointAt(colorCpID),
                         colorCpID
                     );
                 }
-            }
-            else
-            {
+            } else {
                 // remove from underlying Transfer function data
                 m_TransferFunctionData.RemoveColorControlPoint(m_CurrColorControlPointID);
             }
@@ -317,11 +282,9 @@ namespace UnityCTVisualizer
             m_TransferFunctionData.TryUpdateColorLookupTexture();
         }
 
-        void OnClearColorsClick()
-        {
+        void OnClearColorsClick() {
             m_TransferFunctionData.ClearColorControlPoints();
-            foreach (var item in m_ColorControlPoints.Values)
-            {
+            foreach (var item in m_ColorControlPoints.Values) {
                 item.gameObject.SetActive(false);
                 Destroy(item.gameObject);
             }
@@ -330,8 +293,7 @@ namespace UnityCTVisualizer
             Debug.Log("Removed all color control points");
 #endif
             // ClearColorControlPoints adds new default color control point(s). We have to synchronize
-            foreach (var colorCpID in m_TransferFunctionData.ColorControlPointIDs())
-            {
+            foreach (var colorCpID in m_TransferFunctionData.ColorControlPointIDs()) {
                 AddColorControlPointInternal(
                     m_TransferFunctionData.GetColorControlPointAt(colorCpID),
                     colorCpID
@@ -343,11 +305,9 @@ namespace UnityCTVisualizer
             m_TransferFunctionData.TryUpdateColorLookupTexture();
         }
 
-        void OnClearAlphasClick()
-        {
+        void OnClearAlphasClick() {
             m_TransferFunctionData.ClearAlphaControlPoints();
-            foreach (var item in m_AlphaControlPoints.Values)
-            {
+            foreach (var item in m_AlphaControlPoints.Values) {
                 item.gameObject.SetActive(false);
                 Destroy(item.gameObject);
             }
@@ -356,8 +316,7 @@ namespace UnityCTVisualizer
             Debug.Log("Removed all alpha control points");
 #endif
             // ClearAlphaControlPoints adds new default alpha control point(s). We have to synchronize
-            foreach (var alphaCpID in m_TransferFunctionData.AlphaControlPointIDs())
-            {
+            foreach (var alphaCpID in m_TransferFunctionData.AlphaControlPointIDs()) {
                 AddAlphaControlPointInternal(
                     m_TransferFunctionData.GetAlphaControlPointAt(alphaCpID),
                     alphaCpID
@@ -369,10 +328,8 @@ namespace UnityCTVisualizer
             OnAlphaControlPointDataChange();
         }
 
-        void OnColorPickerClick()
-        {
-            if (m_CurrColorControlPointID < 0)
-            {
+        void OnColorPickerClick() {
+            if (m_CurrColorControlPointID < 0) {
                 Debug.LogWarning(
                     "Color picker button is active although no ColorControl is selected!"
                 );
@@ -388,8 +345,7 @@ namespace UnityCTVisualizer
             // TODO: disable TransferFunction1DUI interactiveness
         }
 
-        void OnColorPickerDoneClick(Color finalColor)
-        {
+        void OnColorPickerDoneClick(Color finalColor) {
             m_ColorPickerWrapper.ColorPickerDone -= OnColorPickerDoneClick;
             // update currently selected color control point UI's color. This will automatically update
             // underlying transfer function data
@@ -403,16 +359,14 @@ namespace UnityCTVisualizer
             m_TransferFunctionData.TryUpdateColorLookupTexture();
         }
 
-        void OnColorControlPointSelect(int cpID)
-        {
+        void OnColorControlPointSelect(int cpID) {
             UpdateCurrColorControlPointID(cpID);
 #if DEBUG_UI
             Debug.Log($"Current color control point ID: {m_CurrColorControlPointID}");
 #endif
         }
 
-        void OnAlphaControlPointSelect(int cpID)
-        {
+        void OnAlphaControlPointSelect(int cpID) {
             UpdateCurrAlphaControlPointID(cpID);
 #if DEBUG_UI
             Debug.Log($"Current alpha control point ID: {m_CurrAlphaControlPointID}");
@@ -426,31 +380,26 @@ namespace UnityCTVisualizer
         }
 
         // Called whenever underlying data for any alpha control point change. Expensive method!
-        void OnAlphaControlPointDataChange()
-        {
+        void OnAlphaControlPointDataChange() {
             // update histogram shader
             List<ControlPoint<float, float>> tmp = new();
 
-            foreach (var alphaCpID in m_TransferFunctionData.AlphaControlPointIDs())
-            {
+            foreach (var alphaCpID in m_TransferFunctionData.AlphaControlPointIDs()) {
                 tmp.Add(m_TransferFunctionData.GetAlphaControlPointAt(alphaCpID));
             }
             tmp.Sort((x, y) => x.Position.CompareTo(y.Position));
-            if (tmp[0].Position > 0)
-            {
+            if (tmp[0].Position > 0) {
                 var firstVal = tmp[0].Value;
                 tmp.Insert(0, new(0, firstVal));
             }
-            if (tmp[tmp.Count - 1].Position < 1)
-            {
+            if (tmp[tmp.Count - 1].Position < 1) {
                 var lastVal = tmp[tmp.Count - 1].Value;
                 tmp.Add(new(1, lastVal));
             }
 
             float[] alphaPositions = new float[TFConstants.MAX_ALPHA_CONTROL_POINTS];
             float[] alphaValues = new float[TFConstants.MAX_ALPHA_CONTROL_POINTS];
-            for (int i = 0; i < tmp.Count; ++i)
-            {
+            for (int i = 0; i < tmp.Count; ++i) {
                 alphaPositions[i] = tmp[i].Position;
                 alphaValues[i] = tmp[i].Value;
             }
@@ -462,26 +411,21 @@ namespace UnityCTVisualizer
         }
 
         // Called whenever underlying data for any color control point change. Expensive method!
-        void OnColorControlPointDataChange()
-        {
+        void OnColorControlPointDataChange() {
             m_TransferFunctionData.TryUpdateColorLookupTexture();
         }
 
-        void OnTFTexChange(Texture2D newTex)
-        {
+        void OnTFTexChange(Texture2D newTex) {
             m_GradientColorImage.texture = newTex;
         }
 
-        void OnDensitiesFreqChange(Texture2D newDensityFreq)
-        {
+        void OnDensitiesFreqChange(Texture2D newDensityFreq) {
             m_HistogramImage.texture = newDensityFreq;
         }
 
-        void OnAddAlphaControlPoint(Vector2 histogramPos)
-        {
+        void OnAddAlphaControlPoint(Vector2 histogramPos) {
             // reason for the -2 is for the extreme points at position 0 and 1 respectively.
-            if (m_AlphaControlPoints.Count < TFConstants.MAX_ALPHA_CONTROL_POINTS - 2)
-            {
+            if (m_AlphaControlPoints.Count < TFConstants.MAX_ALPHA_CONTROL_POINTS - 2) {
                 AddAlphaControlPoint(
                     new ControlPoint<float, float>(histogramPos.x, histogramPos.y)
                 );
@@ -489,10 +433,8 @@ namespace UnityCTVisualizer
             }
         }
 
-        void OnAddColorControlPoint(float xPos)
-        {
-            if (m_ColorControlPoints.Count < TFConstants.MAX_COLOR_CONTROL_POINTS - 2)
-            {
+        void OnAddColorControlPoint(float xPos) {
+            if (m_ColorControlPoints.Count < TFConstants.MAX_COLOR_CONTROL_POINTS - 2) {
                 AddColorControlPoint(new ControlPoint<float, Color>(xPos, Color.white));
                 m_TransferFunctionData.TryUpdateColorLookupTexture();
             }

@@ -1,10 +1,8 @@
 using TMPro;
 using UnityEngine;
 
-namespace UnityCTVisualizer
-{
-    public class DatasetMetadataUI : MonoBehaviour
-    {
+namespace UnityCTVisualizer {
+    public class DatasetMetadataUI : MonoBehaviour {
         [SerializeField]
         TMP_InputField m_VolumeWidth;
 
@@ -29,8 +27,7 @@ namespace UnityCTVisualizer
         [SerializeField]
         TMP_InputField m_DensityMax;
 
-        void Awake()
-        {
+        void Awake() {
             m_VolumeWidth.readOnly = true;
             m_VolumeHeight.readOnly = true;
             m_VolumeScaleX.readOnly = true;
@@ -41,12 +38,14 @@ namespace UnityCTVisualizer
         }
 
         /// <summary>
-        /// Initializes read-only input fields from a given UVDS dataset.
-        /// Call this before enabling this UI or during its lifetime to update it.
+        ///     Initializes read-only input fields from a given UVDS dataset's metadata.
+        ///     Call this before enabling this UI or during its lifetime to update it.
         /// </summary>
-        /// <param name="uvdsDataset">An imported UVDS dataset</param>
-        public void Init(IUVDSMetadata metadata)
-        {
+        ///
+        /// <param name="metadata">
+        ///     An imported UVDS dataset's metadata
+        /// </param>
+        public void Init(UVDSMetadata metadata) {
             m_VolumeWidth.text = metadata.ImageWidth.ToString();
             m_VolumeHeight.text = metadata.ImageHeight.ToString();
             m_NumberSlices.text = metadata.NbrSlices.ToString();

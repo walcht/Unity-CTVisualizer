@@ -103,8 +103,8 @@ Shader "UnityCTVisualizer/DVR_outofcore"
             ///             - array size (4 bytes struct): 0.15 MBs (vety nice)
             ///             - smallest subdivision: 187.5 voxels (ok-ish)
             ///
-            ///     Looking at these examples it seems impractical to set MAX_OCTREE_DEPTH to anythin above 7.
-            ///     The reasonable candidates seems to be 7, 6, and 5.
+            ///     Looking at these examples it seems impractical to set MAX_OCTREE_DEPTH to anythin above 7
+            ///     The reasonable candidates seem to be: 7, 6, and 5
             ///
             /// </example>
             struct ResidencyNode {
@@ -141,35 +141,8 @@ Shader "UnityCTVisualizer/DVR_outofcore"
 
             
             /// <summary>
-            ///     Trilinearily samples density from a texture-2D array with first BRICK_SIZE
-            ///     slices corresponding to the bottom left block of the original volume.
-            ///
-            ///                         Y
-            ///                        ↗
-            ///                 c111 .+------------------------------+ c110
-            ///                    .' |                            .'|
-            ///                  .'   |                          .'  |
-            ///                .'     |                        .'    |
-            ///              .'       |                      .'      |
-            ///         Z  .'         |                    .'        |
-            ///         ↑.'           |                  .'          |
-            ///    c011 +-------------------------------+ c010       |
-            ///         |             |                 |            |
-            ///         |             |                 |            |
-            ///         |             |                 |            |
-            ///         |             |                 |            |
-            ///         |        c100 +-----------------|------------+ c101
-            ///         |          .'                   |          .'
-            ///         |        .'                     |        .'
-            ///         | * - - *                       |      .'
-            ///         |- - -* |                       |    .'
-            ///         |BRICK| |                       |  .'
-            ///         | ID0 |'                        |.'
-            ///    c000 +-------------+-----------------+ c001 ⟶  X
-            ///     
-            ///     Bottom-left block (c000) has ID 0, the next block in that same row has ID 1
-            ///     and so on until top right of the same plane the first block exists in (c010)
-            ///     has ID equal to: (nbr_blocks_x_axis * nbr_blocks_z_axis) - 1.
+            ///     Samples density from the brick cache 3D texture
+            ///     slices corresponding to the bottom left block of the original volume:
             ///
             /// </summary>
             /// <remark>

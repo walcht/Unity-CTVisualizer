@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from io import TextIOWrapper
-from typing import Any, Tuple
+from typing import Any, Tuple, Literal
 import logging
 import math
 import os
@@ -49,6 +49,7 @@ class BaseConverter(metaclass=BaseConverterMetaclass):
         self.nbrbricksZ: int = -1
         self.totalnbrbricks: int = -1
         self.resolutionlevels: int = -1
+        self.downsamplinginterpolation: Literal["nearest", "trilinear"] = "trilinear"
         self.colordepth: int = -1
         self.lz4compressed: bool = True
         self.voxeldimX: float = 1
@@ -85,6 +86,7 @@ class BaseConverter(metaclass=BaseConverterMetaclass):
         text_stream.write(f"nbrbricksZ={self.nbrbricksZ}\n")
         text_stream.write(f"totalnbrbricks={self.totalnbrbricks}\n")
         text_stream.write(f"resolutionlevels={self.resolutionlevels}\n")
+        text_stream.write(f"downsamplinginterpolation={self.downsamplinginterpolation}\n")
         text_stream.write(f"colordepth={self.colordepth}\n")
         text_stream.write(f"lz4compressed={1 if self.lz4compressed else 0}\n")
         text_stream.write(f"voxeldimX={self.voxeldimX}\n")

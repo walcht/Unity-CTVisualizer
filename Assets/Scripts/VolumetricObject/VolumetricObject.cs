@@ -1,76 +1,75 @@
-#define DEBUG
 using UnityEngine;
 
-namespace UnityCTVisualizer
-{
-    public interface IVolumetricVisualizer
-    {
+namespace UnityCTVisualizer {
+    public interface IVolumetricVisualizer {
         VolumetricDataset VolumetricDataset { set; }
         ITransferFunction TransferFunction { set; }
         float AlphaCutoff { get; set; }
     }
 
     [RequireComponent(typeof(MeshRenderer)), RequireComponent(typeof(MeshFilter))]
-    public class VolumetricObject : MonoBehaviour, IVolumetricVisualizer
-    {
+    public class VolumetricObject : MonoBehaviour, IVolumetricVisualizer {
         [SerializeField]
-        MeshRenderer m_AttachedMeshRenderer;
+        MeshRenderer m_attached_mesh_renderer;
 
-        int SHADER_DENSITIES_TEX_ID = Shader.PropertyToID("_Densities");
-        int SHADER_TFTEX_ID = Shader.PropertyToID("_TFColors");
-        int SHADER_ALPHA_CUTOFF_ID = Shader.PropertyToID("_AlphaCutoff");
-        int SHADER_DENSITIES_TEX_SIZE_ID = Shader.PropertyToID("_DensitiesTexSize");
+        readonly int SHADER_BRICK_CACHE_TEX_ID = Shader.PropertyToID("_BrickCache");
+        readonly int SHADER_BRICK_CACHE_TEX_SIZE_ID = Shader.PropertyToID("_BrickCacheTexSize");
+        readonly int SHADER_TFTEX_ID = Shader.PropertyToID("_TFColors");
+        readonly int SHADER_ALPHA_CUTOFF_ID = Shader.PropertyToID("_AlphaCutoff");
 
-        VolumetricDataset m_VolumeDataset = null;
-        public VolumetricDataset VolumetricDataset
-        {
-            set
-            {
-                if (m_VolumeDataset != null)
-                {
-                    m_VolumeDataset.OnDensitiesChange -= OnDenstitiesTexChange;
-                } // TODO: do we need a cleanup here?
-                m_VolumeDataset = value;
-                m_VolumeDataset.OnDensitiesChange += OnDenstitiesTexChange;
+        private VolumetricDataset m_volume_dataset = null;
+        private ITransferFunction m_transfer_function = null;
+
+        // visualization parameters
+        private float m_AlphaCutoff = (254.0f) / 255.0f;
+
+        public VolumetricDataset VolumetricDataset {
+            set {
+                m_volume_dataset = value;
                 // request densities 3D texture generation
-                m_VolumeDataset.TryGenerateDensitiesTexture();
+                m_attached_mesh_renderer.sharedMaterial.SetVector(
+                    SHADER_BRICK_CACHE_TEX_SIZE_ID,
+                    new Vector4(
+                        m_volume_dataset.BrickCacheSize.x,
+                        m_volume_dataset.BrickCacheSize.y,
+                        m_volume_dataset.BrickCacheSize.z,
+                        0.0f
+                    )
+                );
+                m_attached_mesh_renderer.sharedMaterial.SetTexture(
+                    SHADER_BRICK_CACHE_TEX_ID,
+                    m_volume_dataset.BrickCacheTex
+                );
                 // scale mesh to match correct dimensions of the original volumetric data
-                GetComponent<Transform>().localScale = m_VolumeDataset.Scale;
+                GetComponent<Transform>().localScale = m_volume_dataset.Metadata.Scale;
                 // rotate mesh according to provided rotation
                 GetComponent<Transform>().localRotation = Quaternion.Euler(
-                    m_VolumeDataset.EulerRotation
+                    m_volume_dataset.Metadata.EulerRotation
                 );
             }
         }
-        ITransferFunction m_TransferFunction = null;
 
         /// <summary>
-        /// Sets transfer function for this volumetric object to use (for requesting color and alpha
-        /// lookup texture).
+        ///     Sets transfer function for this volumetric object to use (for requesting color and alpha
+        ///     lookup texture).
         /// </summary>
-        public ITransferFunction TransferFunction
-        {
-            set
-            {
-                if (value != m_TransferFunction)
-                {
-                    if (m_TransferFunction != null)
-                        m_TransferFunction.TransferFunctionTexChange -= OnTransferFunctionTexChange;
-                    m_TransferFunction = value;
-                    m_TransferFunction.TransferFunctionTexChange += OnTransferFunctionTexChange;
-                    m_TransferFunction.ForceUpdateColorLookupTexture();
+        public ITransferFunction TransferFunction {
+            set {
+                if (value != m_transfer_function) {
+                    if (m_transfer_function != null)
+                        m_transfer_function.TFColorsLookupTexChange -= OnTFColorsLookupTexChange;
+                    m_transfer_function = value;
+                    m_transfer_function.TFColorsLookupTexChange += OnTFColorsLookupTexChange;
+                    m_transfer_function.ForceUpdateColorLookupTexture();
                 }
             }
         }
 
-        float m_AlphaCutoff = (254.0f) / 255.0f;
-        public float AlphaCutoff
-        {
+        public float AlphaCutoff {
             get => m_AlphaCutoff;
-            set
-            {
+            set {
                 m_AlphaCutoff = Mathf.Clamp01(value);
-                m_AttachedMeshRenderer.sharedMaterial.SetFloat(
+                m_attached_mesh_renderer.sharedMaterial.SetFloat(
                     SHADER_ALPHA_CUTOFF_ID,
                     m_AlphaCutoff
                 );
@@ -78,46 +77,19 @@ namespace UnityCTVisualizer
         }
 
         INTERPOLATION m_InterpolationMethod;
-        public INTERPOLATION InterpolationMethod
-        {
+        public INTERPOLATION InterpolationMethod {
             // https://docs.unity3d.com/ScriptReference/Shader-keywordSpace.html
-            set
-            {
+            set {
                 m_InterpolationMethod = value;
-                switch (m_InterpolationMethod)
-                {
+                switch (m_InterpolationMethod) {
                     case INTERPOLATION.NEAREST_NEIGHBOR:
-                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword(
-                            "TRILINEAR_PRE_CLASSIFICATION"
-                        );
-                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword(
-                            "TRILINEAR_POST_CLASSIFICATION"
-                        );
-                        m_AttachedMeshRenderer.sharedMaterial.EnableKeyword("NEAREST_NEIGHBOR");
-                        break;
+                    break;
 
-                    case INTERPOLATION.TRILINEAR_PRE_CLASSIFICATION:
-                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword("NEAREST_NEIGHBOR");
-                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword(
-                            "TRILINEAR_POST_CLASSIFICATION"
-                        );
-                        m_AttachedMeshRenderer.sharedMaterial.EnableKeyword(
-                            "TRILINEAR_PRE_CLASSIFICATION"
-                        );
-                        break;
-
-                    case INTERPOLATION.TRILINEAR_POST_CLASSIFICATION:
-                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword("NEAREST_NEIGHBOR");
-                        m_AttachedMeshRenderer.sharedMaterial.DisableKeyword(
-                            "TRILINEAR_PRE_CLASSIFICATION"
-                        );
-                        m_AttachedMeshRenderer.sharedMaterial.EnableKeyword(
-                            "TRILINEAR_POST_CLASSIFICATION"
-                        );
-                        break;
+                    case INTERPOLATION.POST_TRILLINEAR_INTERPOLATIVE_CLASSIFICATION:
+                    break;
 
                     default:
-                        break;
+                    break;
                 }
 #if DEBUG
                 Debug.Log($"New interpolation method: {m_InterpolationMethod}");
@@ -125,34 +97,13 @@ namespace UnityCTVisualizer
             }
         }
 
-        void OnDisable()
-        {
-            if (m_VolumeDataset != null)
-                m_VolumeDataset.OnDensitiesChange -= OnDenstitiesTexChange;
-            if (m_TransferFunction != null)
-                m_TransferFunction.TransferFunctionTexChange -= OnTransferFunctionTexChange;
+        void OnDisable() {
+            if (m_transfer_function != null)
+                m_transfer_function.TFColorsLookupTexChange -= OnTFColorsLookupTexChange;
         }
 
-        void OnTransferFunctionTexChange(Texture2D newTex)
-        {
-            m_AttachedMeshRenderer.sharedMaterial.SetTexture(SHADER_TFTEX_ID, newTex);
-        }
-
-        void OnDenstitiesTexChange(Texture3D newDensitiesTex)
-        {
-            m_AttachedMeshRenderer.sharedMaterial.SetVector(
-                SHADER_DENSITIES_TEX_SIZE_ID,
-                new Vector4(
-                    newDensitiesTex.width,
-                    newDensitiesTex.height,
-                    newDensitiesTex.depth,
-                    0.0f
-                )
-            );
-            m_AttachedMeshRenderer.sharedMaterial.SetTexture(
-                SHADER_DENSITIES_TEX_ID,
-                newDensitiesTex
-            );
+        void OnTFColorsLookupTexChange(Texture2D new_colors_lookup_tex) {
+            m_attached_mesh_renderer.sharedMaterial.SetTexture(SHADER_TFTEX_ID, new_colors_lookup_tex);
         }
     }
 }

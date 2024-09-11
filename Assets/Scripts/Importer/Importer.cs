@@ -1,17 +1,20 @@
 using System;
 using System.IO;
+using K4os.Compression.LZ4;
 using UnityEngine;
 
-namespace UnityCTVisualizer
-{
-    public interface IUVDSMetadata
-    {
+namespace UnityCTVisualizer {
+    public enum ColorDepth {
+        UINT8, UINT16, FLOAT16
+    }
+
+    public class UVDSMetadata {
         public int OriginalImageWidth { get; set; }
         public int OriginalImageHeight { get; set; }
         public int OriginalNbrSlices { get; set; }
-        public int ImageWidth { get; set; }  // multiple of bricksize
-        public int ImageHeight { get; set; }  // multiple of bricksize
-        public int NbrSlices { get; set; }  // multiple of bricksize
+        public int ImageWidth { get; set; }
+        public int ImageHeight { get; set; }
+        public int NbrSlices { get; set; }
         public int BrickSize { get; set; }
         public int BrickSizeBytes { get; set; }
         public int NbrBricksX { get; set; }
@@ -26,195 +29,187 @@ namespace UnityCTVisualizer
         public float DensityMin { get; set; }
         public float DensityMax { get; set; }
     }
-    public interface IProgressHandler
-    {
-        float Progress { set; }
-        string Message { set; }
-    }
 
-    public enum ColorDepth
-    {
-        UINT8, UINT16, FLOAT16
-    }
+    public static class Importer {
+        public static float SCALE_DEFAULT = -1.0f;
+        public static VolumetricDataset ImportUVDSDataset(string dataset_path) {
+            var volumetric_dataset = ScriptableObject.CreateInstance<VolumetricDataset>();
+            volumetric_dataset.DatasetPath = dataset_path;
+            return volumetric_dataset;
+        }
 
-    public static class Importer
-    {
-        const float SCALE_DEFAULT = -1.0f;
+        public static void ImportMetadata(string dataset_path, ref UVDSMetadata metadata) {
+            string metadata_fp;
+            string[] volume_chunks_fps;
 
-        /// <summary>
-        /// Creates a VolumetricData ScriptableObject instance, imports metadata attributes,
-        /// and stores filepath references to volume bricks.
-        /// </summary>
-        /// <param name="directoryPath">absolute path to a UVDS dataset directory containing a metadata.txt file
-        /// and .uvds volume chunk binary files.</param>
-        public static VolumetricDataset ImporterUVDSDataset(string directoryPath, IProgressHandler progressHandler = null)
-        {
-            string metadataFilePath;
-            string[] volumeChunksFilePaths;
-
-            if (progressHandler != null)
-            {
-                progressHandler.Progress = 0.0f;
-                progressHandler.Message = "Importing UVDS dataset ...";
-            }
-
-            try
-            {
-                metadataFilePath = Directory.GetFiles(directoryPath, "metadata.txt")[0];
-                volumeChunksFilePaths = Directory.GetFiles(directoryPath, "*.uvds");
-                Array.Sort(volumeChunksFilePaths);
-
-                if (progressHandler != null)
-                {
-                    progressHandler.Progress = 0.5f;
-                    progressHandler.Message = $"Found {volumeChunksFilePaths.Length} volume chunks. Importing metadata attributes ...";
-                }
-            }
-            catch
-            {
+            try {
+                metadata_fp = Directory.GetFiles(dataset_path, "metadata.txt")[0];
+                volume_chunks_fps = Directory.GetFiles(dataset_path, "*.uvds");
+                Array.Sort(volume_chunks_fps);
+            } catch {
                 throw new FileLoadException("Failed to extract UVDS dataset from provided directory");
             }
-            VolumetricDataset volumetricDataset =
-                ScriptableObject.CreateInstance<VolumetricDataset>();
-            using (StreamReader sr = new(metadataFilePath))
-            {
+            using (StreamReader sr = new(metadata_fp)) {
                 string line;
                 Vector3 scale = new(1, 1, 1);
                 Vector3 eulerRotation = new(1, 1, 1);
-                while ((line = sr.ReadLine()) != null)
-                {
+                while ((line = sr.ReadLine()) != null) {
                     string[] split = line.Split("=");
-                    switch (split[0])
-                    {
+                    switch (split[0]) {
                         case "originalimagewidth":
-                            volumetricDataset.OriginalImageWidth = int.Parse(split[1]);
-                            break;
+                        metadata.OriginalImageWidth = int.Parse(split[1]);
+                        break;
                         case "originalimageheight":
-                            volumetricDataset.OriginalImageHeight = int.Parse(split[1]);
-                            break;
+                        metadata.OriginalImageHeight = int.Parse(split[1]);
+                        break;
                         case "originalnbrslices":
-                            volumetricDataset.OriginalNbrSlices = int.Parse(split[1]);
-                            break;
+                        metadata.OriginalNbrSlices = int.Parse(split[1]);
+                        break;
                         case "imagewidth":
-                            volumetricDataset.ImageWidth = int.Parse(split[1]);
-                            break;
+                        metadata.ImageWidth = int.Parse(split[1]);
+                        break;
                         case "imageheight":
-                            volumetricDataset.ImageHeight = int.Parse(split[1]);
-                            break;
+                        metadata.ImageHeight = int.Parse(split[1]);
+                        break;
                         case "nbrslices":
-                            volumetricDataset.NbrSlices = int.Parse(split[1]);
-                            break;
+                        metadata.NbrSlices = int.Parse(split[1]);
+                        break;
                         case "bricksize":
-                            volumetricDataset.BrickSize = int.Parse(split[1]);
-                            break;
+                        metadata.BrickSize = int.Parse(split[1]);
+                        break;
                         case "bricksizebytes":
-                            volumetricDataset.BrickSizeBytes = int.Parse(split[1]);
-                            break;
+                        metadata.BrickSizeBytes = int.Parse(split[1]);
+                        break;
                         case "nbrbricksX":
-                            volumetricDataset.NbrBricksX = int.Parse(split[1]);
-                            break;
+                        metadata.NbrBricksX = int.Parse(split[1]);
+                        break;
                         case "nbrbricksY":
-                            volumetricDataset.NbrBricksY = int.Parse(split[1]);
-                            break;
+                        metadata.NbrBricksY = int.Parse(split[1]);
+                        break;
                         case "nbrbricksZ":
-                            volumetricDataset.NbrBricksZ = int.Parse(split[1]);
-                            break;
+                        metadata.NbrBricksZ = int.Parse(split[1]);
+                        break;
                         case "totalnbrbricks":
-                            volumetricDataset.TotalNbrBricks = int.Parse(split[1]);
-                            break;
+                        metadata.TotalNbrBricks = int.Parse(split[1]);
+                        break;
                         case "resolutionlevels":
-                            volumetricDataset.ResolutionLevels = int.Parse(split[1]);
-                            break;
+                        metadata.ResolutionLevels = int.Parse(split[1]);
+                        break;
                         case "colordepth":
-                            switch (split[1])
-                            {
-                                case "uint8":
-                                    volumetricDataset.ColourDepth = ColorDepth.UINT8;
-                                    break;
-                                case "uint16":
-                                    volumetricDataset.ColourDepth = ColorDepth.UINT16;
-                                    break;
-                                case "float16":
-                                    volumetricDataset.ColourDepth = ColorDepth.FLOAT16;
-                                    break;
-                                default:
-                                    break;
-                            }
+                        switch (split[1]) {
+                            case "uint8":
+                            metadata.ColourDepth = ColorDepth.UINT8;
+                            break;
+                            case "uint16":
+                            metadata.ColourDepth = ColorDepth.UINT16;
+                            break;
+                            case "float16":
+                            metadata.ColourDepth = ColorDepth.FLOAT16;
+                            break;
+                            default:
+                            break;
+                        }
 
-                            break;
+                        break;
                         case "lz4compressed":
-                            volumetricDataset.Lz4Compressed = int.Parse(split[1]) == 1;
-                            break;
+                        metadata.Lz4Compressed = int.Parse(split[1]) == 1;
+                        break;
                         case "voxeldimX":
-                            float voxelDimX = float.Parse(split[1]);
-                            if (voxelDimX == SCALE_DEFAULT)
-                            {
-                                scale.x = 1.0f;
-                                Debug.LogWarning(
-                                    "Voxel dimension X has invalid default value."
-                                        + "Default scale 1 is used for the volume along the X axis. The dimensions of the "
-                                        + "volume no longer reflect its dimensions in reality!"
-                                );
-                                break;
-                            }
-                            scale.x = (voxelDimX / 1000.0f) * volumetricDataset.ImageWidth;
+                        float voxelDimX = float.Parse(split[1]);
+                        if (voxelDimX == SCALE_DEFAULT) {
+                            scale.x = 1.0f;
+                            Debug.LogWarning(
+                                "Voxel dimension X has invalid default value."
+                                    + "Default scale 1 is used for the volume along the X axis. The dimensions of the "
+                                    + "volume no longer reflect its dimensions in reality!"
+                            );
                             break;
+                        }
+                        scale.x = (voxelDimX / 1000.0f) * metadata.ImageWidth;
+                        break;
                         case "voxeldimY":
-                            float voxelDimY = float.Parse(split[1]);
-                            if (voxelDimY == SCALE_DEFAULT)
-                            {
-                                scale.y = 1.0f;
-                                Debug.LogWarning(
-                                    "Voxel dimension Y has invalid default value."
-                                        + "Default scale 1 is used for the volume along the Y axis. The dimensions of the "
-                                        + "volume no longer reflect its dimensions in reality!"
-                                );
-                                break;
-                            }
-                            scale.y = (voxelDimY / 1000.0f) * volumetricDataset.ImageHeight;
+                        float voxelDimY = float.Parse(split[1]);
+                        if (voxelDimY == SCALE_DEFAULT) {
+
+                            scale.y = 1.0f;
+                            Debug.LogWarning(
+                                "Voxel dimension Y has invalid default value."
+                                    + "Default scale 1 is used for the volume along the Y axis. The dimensions of the "
+                                    + "volume no longer reflect its dimensions in reality!"
+                            );
                             break;
+                        }
+                        scale.y = (voxelDimY / 1000.0f) * metadata.ImageHeight;
+                        break;
                         case "voxeldimZ":
-                            float voxelDimZ = float.Parse(split[1]);
-                            if (voxelDimZ == SCALE_DEFAULT)
-                            {
-                                scale.z = 1.0f;
-                                Debug.LogWarning(
-                                    "Voxel dimension Z has invalid default value."
-                                        + "Default scale 1 is used for the volume along the Z axis. The dimensions of the "
-                                        + "volume no longer reflect its dimensions in reality!"
-                                );
-                                break;
-                            }
-                            scale.z = (voxelDimZ / 1000.0f) * volumetricDataset.NbrSlices;
+                        float voxelDimZ = float.Parse(split[1]);
+                        if (voxelDimZ == SCALE_DEFAULT) {
+                            scale.z = 1.0f;
+                            Debug.LogWarning(
+                                "Voxel dimension Z has invalid default value."
+                                    + "Default scale 1 is used for the volume along the Z axis. The dimensions of the "
+                                    + "volume no longer reflect its dimensions in reality!"
+                            );
                             break;
+                        }
+                        scale.z = (voxelDimZ / 1000.0f) * metadata.NbrSlices;
+                        break;
                         case "eulerrotX":
-                            eulerRotation.x = float.Parse(split[1]);
-                            break;
+                        eulerRotation.x = float.Parse(split[1]);
+                        break;
                         case "eulerrotY":
-                            eulerRotation.y = float.Parse(split[1]);
-                            break;
+                        eulerRotation.y = float.Parse(split[1]);
+                        break;
                         case "eulerrotZ":
-                            eulerRotation.z = float.Parse(split[1]);
-                            break;
+                        eulerRotation.z = float.Parse(split[1]);
+                        break;
                         case "densitymin":
-                            volumetricDataset.DensityMin = float.Parse(split[1]);
-                            break;
+                        metadata.DensityMin = float.Parse(split[1]);
+                        break;
                         case "densitymax":
-                            volumetricDataset.DensityMax = float.Parse(split[1]);
-                            break;
+                        metadata.DensityMax = float.Parse(split[1]);
+                        break;
                         default:
-                            break;
+                        break;
                     }
                 }
-                volumetricDataset.Scale = scale;
-                volumetricDataset.EulerRotation = eulerRotation;
-                if (progressHandler != null)
-                {
-                    progressHandler.Progress = 1f;
-                    progressHandler.Message = $"UVDS dataset imported successfully";
-                }
+                metadata.Scale = scale;
+                metadata.EulerRotation = eulerRotation;
             }
-            return volumetricDataset;
+        }
+
+        /// <summary>
+        ///     Imports a single volume chunk (i.e., a subset of the 3D volume) from the UVDS path.
+        /// </summary>
+        /// 
+        /// <remarks>
+        ///     Import will fail if chunk size in bytes exceeds the maximum size for an object allowed
+        ///     by .NET (i.e., 2GBs). No size checks are performed in this function.
+        /// </remarks>
+        /// 
+        /// <param name="dataset_path">UVDS root directory path</param>
+        /// 
+        /// <param name="metadata">UVDS metadata</param>
+        /// 
+        /// <param name="chunk_id">the id of the chunk to be imported. The file <paramref name="chunk_id"/>.uvds should exist
+        /// in the provided resolution level subdirectory of the UVDS path</param>
+        /// 
+        /// <param name="resolution_lvl">resolution level of the requested chunk. The folder <paramref name="resolution_lvl"/>
+        /// should exist as a direct subdirectory of the UVDS path</param>
+        /// 
+        /// <returns>byte array of the requested chunk. TODO: describe the expected layout</returns>
+        public static byte[] ImportChunk(string dataset_path, UVDSMetadata metadata, int chunk_id, int resolution_lvl) {
+            var chunk_fp = Path.Combine(dataset_path, $"{resolution_lvl}", $"{chunk_id}.uvds");
+#if DEBUG
+            Debug.Log($"importing chunk: {chunk_id}, with size: {metadata.BrickSize} bytes, from path: {chunk_fp}");
+#endif
+            byte[] data = File.ReadAllBytes(chunk_fp);
+            if (metadata.Lz4Compressed) {
+                byte[] decompressed_data = new byte[metadata.BrickSizeBytes];
+                LZ4Codec.Decode(source: data, target: decompressed_data);
+                return decompressed_data;
+            }
+            return data;
         }
 
     }

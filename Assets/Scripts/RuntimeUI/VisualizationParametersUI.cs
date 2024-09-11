@@ -9,8 +9,8 @@ namespace UnityCTVisualizer
     public enum INTERPOLATION
     {
         NEAREST_NEIGHBOR = 0,
-        TRILINEAR_PRE_CLASSIFICATION,
-        TRILINEAR_POST_CLASSIFICATION,
+        POST_TRILLINEAR_INTERPOLATIVE_CLASSIFICATION,
+        // TRILINEAR_POST_CLASSIFICATION, - yields worse performance and worse visuals
     }
 
     public class VisualizationParametersUI : MonoBehaviour

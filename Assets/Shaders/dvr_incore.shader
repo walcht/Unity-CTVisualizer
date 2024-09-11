@@ -1,4 +1,4 @@
-Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
+Shader "UnityCTVisualizer/dvr_incore"
 {
     Properties
 	{
@@ -6,12 +6,6 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
         // assuming texture format is RHalf (i.e., 16 bit float) that is 16GBs of VRAM memory
         // currently it is assumed that the maximum VRAM of GPU is 16GBs (to avoid having
         // more that a single densities 3D texture)
-        //
-        // But what is we have a 16 * 16 * 33 554 432? This is still within the 16GBs limit
-        // but the original texture has to be reshaped to fit within 2048^3 3D texture
-        //
-        // If such re-shaping occurs - TEXTURE_RESHAPED_ON is set and some additional runtime
-        // cost in incured (for translating the coordinates)
 	    [NoScaleOffset] _Densities("Densities", 3D) = "" {}
         [NoScaleOffset] _TFColors("Transfer Function Colors Texture", 2D) = "" {}
 		_AlphaCutoff("Opacity Cutoff", Range(0.0, 1.0)) = 0.95
@@ -57,82 +51,6 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
             float4 sampleTF1DColor(float density) {
                 return tex2Dlod(_TFColors, float4(density, 0.0f, 0.0f, 0.0f));
             }
-
-            /// 
-            /// <summary>
-            ///     Converts RGB color to HSV space with no changes to the alpha component.
-            ///     Code copied and modified from: https://stackoverflow.com/questions/15095909/from-rgb-to-hsv-in-opengl-glsl
-            /// </summary>
-            float4 rgb2hsv(float4 c)
-            {
-                float4 K = float4(0.0f, -1.0f / 3.0f, 2.0f / 3.0f, -1.0f);
-                float4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));
-                float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
-                float d = q.x - min(q.w, q.y);
-                float e = 1.0e-10;
-                return float4(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x, c.a);
-            }
-            
-            /// <summary>
-            ///     Converts HSV color to RGB space with no changes to the alpha component.
-            ///     Code copied and modified from: https://stackoverflow.com/questions/15095909/from-rgb-to-hsv-in-opengl-glsl
-            /// </summary>
-            float4 hsv2rgb(float4 c)
-            {
-                float4 K = float4(1.0f, 2.0f / 3.0f, 1.0f / 3.0f, 3.0f);
-                float3 p = abs(frac(c.xxx + K.xyz) * 6.0f - K.www);
-                return float4(c.z * lerp(K.xxx, clamp(p - K.xxx, 0.0f, 1.0f), c.y), c.a);
-            }
-
-            
-            /// for reference: https://paulbourke.net/miscellaneous/interpolation/
-            ///
-            ///                          Y
-            ///         Z              ↗
-            ///        ↑   .+------- c1
-            ///          .' |      .'|
-            ///         +---+----+'  |
-            ///         |   |    |   |
-            ///         |  ,+----+---+ 
-            ///         |.'      | .' 
-            ///        c0--------+' ⟶  X
-            ///
-            /// <summary>
-            ///     Trilinear interpolation. Use this for pre-classification interpolation (i.e.,
-            ///     interpolate density then classify using TF lookup texture. This method is expensive.
-            /// </summary>
-            float4 interpolateTrilinear(sampler3D tex, float3 texCoord, float3 texSize)
-            {
-            	// shift the coordinate from [0,1] to [-0.5, texSize-0.5]
-            	float3 coord_grid = texCoord * texSize - 0.5f;
-            	float3 index = floor(coord_grid);
-                // v is value withing the 8 vertices (cube) is used for interpolation
-            	float3 v = coord_grid - index;
-                float3 one_minus_v = 1.0f - v;
-                float3 one_over_texsize = 1.0f / texSize;
-                // the values at the vertices are needed. Since this is an AABB, only the 2 corners c0 and c1
-                // need to be determined
-                float3 c0 = one_over_texsize * (index + 0.5f);
-                float3 c1 = one_over_texsize * (index + 1.5f);
-            	float4 V_000 = tex3Dlod(tex, float4(c0, 0.0f));
-            	float4 V_100 = tex3Dlod(tex, float4(c1.x, c0.y, c0.z, 0.0f));
-            	float4 V_010 = tex3Dlod(tex, float4(c0.x, c1.y, c0.z, 0.0f));
-            	float4 V_110 = tex3Dlod(tex, float4(c1.x, c1.y, c0.z, 0.0f));
-            	float4 V_001 = tex3Dlod(tex, float4(c0.x, c0.y, c1.z, 0.0f));
-            	float4 V_101 = tex3Dlod(tex, float4(c1.x, c0.y, c1.z, 0.0f));
-            	float4 V_011 = tex3Dlod(tex, float4(c0.x, c1.y, c1.z, 0.0f));
-            	float4 V_111 = tex3Dlod(tex, float4(c1, 0.0f));
-                return  V_000 * one_minus_v.x * one_minus_v.y * one_minus_v.z +
-                        V_100 * v.x * one_minus_v.y * one_minus_v.z +
-                        V_010 * one_minus_v.x * v.y * one_minus_v.z +
-                        V_001 * one_minus_v.x * one_minus_v.y * v.z +
-                        V_101 * v.x * one_minus_v.y * v.z +
-                        V_011 * one_minus_v.x * v.y * v.z +
-                        V_110 * v.x * v.y * one_minus_v.z +
-                        V_111 * v.x * v.y * v.z;
-            
-            }
-
             
             /// <summary>
             ///     Axis-Aligned Bounding Box (AABB) box. An AABB only needs
@@ -224,16 +142,12 @@ Shader "UnityCTVisualizer/DirectVolumeRenderingShader"
                 // TODO:    improve sampling loop (maybe use unroll with outside check?)
                 for (int iter = 0; iter < num_iterations; ++iter)
                 {
-                    // don't forget to transition from [-0.5, 0.5] range to [0.0, 1.0]
                     float sampled_density;
                     float4 src;
-                    // for NEAREST_NEIGHBOR neighbor, use this:
-                    // sampled_density = tex3Dlod(_Densities, float4(accm_ray + 0.5f, 0.0f)).r;
-                    sampled_density = interpolateTrilinear(_Densities, accm_ray + 0.5f, _DensitiesTexSize);
+                    // transition from [-0.5, 0.5] range to [0.0, 1.0]
+                    sampled_density = tex3Dlod(_Densities, float4(accm_ray + 0.5f, 0.0f)).r;
                     src = sampleTF1DColor(sampled_density);
                     // blending
-                    // TODO:    is direct sampling of alpha the correct method? Check what this is doing:
-                    //          https://github.com/LDeakin/VkVolume/blob/master/shaders/volume_render.frag
                     src.rgb *= src.a;
                     accm_color = (1.0f - accm_color.a) * src + accm_color;
                     accm_ray += delta_step;

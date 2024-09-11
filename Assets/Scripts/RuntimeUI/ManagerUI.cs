@@ -5,6 +5,7 @@ namespace UnityCTVisualizer
     public enum TF
     {
         TF1D,
+        // TF2D - currently not added
     }
 
     public class ManagerUI : MonoBehaviour
@@ -19,7 +20,7 @@ namespace UnityCTVisualizer
         public Vector3 m_VolumetricObjectPosition;
 
         public TF m_DefaultTF = TF.TF1D;
-        public INTERPOLATION m_DefaultInterpolation = INTERPOLATION.NEAREST_NEIGHBOR;
+        public INTERPOLATION m_DefaultInterpolation = INTERPOLATION.POST_TRILLINEAR_INTERPOLATIVE_CLASSIFICATION;
 
         VolumetricObject m_VolumetricObject = null;
         VolumetricDataset m_VolumetricDataset = null;
@@ -48,7 +49,7 @@ namespace UnityCTVisualizer
             // set default interpolation method
             OnInterpolationChange(m_DefaultInterpolation);
             m_MetadataUI.gameObject.SetActive(true);
-            m_MetadataUI.Init(volumetricDataset);
+            m_MetadataUI.Init(volumetricDataset.Metadata);
             m_VisualizationParamsUI.Init(volumetricDataset, m_VolumetricObject);
             m_VisualizationParamsUI.gameObject.SetActive(true);
         }

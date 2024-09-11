@@ -8,7 +8,7 @@ import numpy as np
 from numpy.typing import NDArray
 import click
 from typing import Literal
-from tqdm import tqdm
+from tqdm import tqdm # type: ignore
 import lz4.frame  # type: ignore
 
 
@@ -60,13 +60,13 @@ class ImagesConverter(BaseConverter):
     def import_dataset(
         self,
         dataset_dir: str,
-        bricksize: int = 32,
+        bricksize: int = 128,
         resolution_levels: int = 0,
         compress: bool = True,
     ) -> None:
         """Imports and converts a sequence of images to Unity Volumetric DataSet (UVDS) format.
         Image files do not contain volume attributes such as width, height or depth therefore
-        command line prompts will ask the user for these values.
+        command line prompt the user for these values.
 
         Supported image file formats are:
             - TIFF (.tif)
@@ -171,7 +171,8 @@ class ImagesConverter(BaseConverter):
                 with lz4.frame.open(
                     os.path.join(
                         directory_path,
-                        f"{basename}_{i + (slice_idx // self.bricksize) * self.nbrbricksX * self.nbrbricksY}.uvds{".lz4" if self.lz4compressed else ""}",
+                        f"{basename}_{i + (slice_idx // self.bricksize) * self.nbrbricksX * self.nbrbricksY}.uvds" +
+                            f"{".lz4" if self.lz4compressed else ""}",
                     ),
                     mode="ab",
                     compression_level=lz4.frame.COMPRESSIONLEVEL_MAX

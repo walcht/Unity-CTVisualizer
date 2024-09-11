@@ -3,16 +3,17 @@ using UnityEngine;
 
 namespace UnityCTVisualizer
 {
+    public interface IProgressHandler
+    {
+        float Progress { set; }
+        string Message { set; }
+    }
+
     public class ProgressHandler : MonoBehaviour, IProgressHandler
     {
-        [SerializeField]
-        TMP_Text m_TextMessage;
-
-        [SerializeField]
-        TMP_Text m_PercentageText;
-
-        [SerializeField]
-        RectTransform m_ProgressBar;
+        [SerializeField] TMP_Text m_TextMessage;
+        [SerializeField] TMP_Text m_PercentageText;
+        [SerializeField] RectTransform m_ProgressBar;
 
         void OnEnable()
         {
@@ -33,7 +34,6 @@ namespace UnityCTVisualizer
             }
         }
 
-        string m_Message;
         public string Message
         {
             set
