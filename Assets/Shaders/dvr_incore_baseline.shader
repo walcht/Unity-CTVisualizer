@@ -101,14 +101,15 @@ Shader "UnityCTVisualizer/dvr_incore_baseline"
 
                 // get normalized ray direction in object space and in view space (i.e., camera space)
                 float3 ray_dir_viewspace;
+                float3 ray_origin_viewspace = UnityObjectToViewPos(modelVertex);
                 if (unity_OrthoParams.w > 0) {
-                    // means orthogonal camera mode. Here every ray has the same direction
+                    // orthogonal camera mode. Every ray has the same direction
                     ray_dir_viewspace = float3(0.0f, 0.0f, 1.0f);
                     float3 cameraWorldDir = mul((float3x3)unity_CameraToWorld, ray_dir_viewspace);
                     ray.dir = normalize(mul(unity_WorldToObject, cameraWorldDir));
                 } else {
-                    // means perspective
-                    ray_dir_viewspace = -normalize(modelVertex);
+                    // perspective camera. Ray direction depends on interpolated model vertex position for this fragment
+                    ray_dir_viewspace = -normalize(ray_origin_viewspace);
                     ray.dir = normalize(ObjSpaceViewDir(float4(modelVertex, 0.0f)));
                 }
 
@@ -119,18 +120,10 @@ Shader "UnityCTVisualizer/dvr_incore_baseline"
                 // intersect ray with the AABB and get parametric start and end values
                 ray.t_out = slabs(ray.origin, ray.dir, aabb);
 
-                float3 farPos = ray.origin + ray.dir * ray.t_out - float3(0.5f, 0.5f, 0.5f);
-                float4 clipPos = UnityObjectToClipPos(float4(farPos, 1.0f));
-                ray.t_out += min(clipPos.w, 0.0);
-
-                // t_out corresponds to the volume's AABB exit point but the exit
-                // point may be reached earlier if the camera is inside the volume
-                // t_frust corresponds to the frustrums exit
-                /*
-                float3 ray_origin_viewspace = UnityObjectToViewPos(modelVertex);
+                // t_out corresponds to the volume's AABB exit point but the exit point may be reached earlier if
+                // the camera is inside the volume. t_frust corresponds to the frustrum exit
                 float t_frust = -(ray_origin_viewspace.z + _ProjectionParams.y) / ray_dir_viewspace.z;
                 ray.t_out = min(ray.t_out, t_frust);
-                */
 
                 return ray;
             }
@@ -169,7 +162,7 @@ Shader "UnityCTVisualizer/dvr_incore_baseline"
                 // initialize a ray in model space
                 Ray ray = flipRay(getRayFromBackface(interpolated.modelVertex));
                 // distance of segment intersecting with AABB volume
-                float seg_len = ray.t_out;
+                float seg_len = ray.t_out;  // because t_in == 0
                 float step_size = BOUNDING_BOX_LONGEST_SEGMENT / _MaxIterations;
                 int num_iterations = (int)clamp(seg_len / step_size, 1, (int)_MaxIterations);
                 float3 delta_step = ray.dir * step_size;
@@ -178,14 +171,13 @@ Shader "UnityCTVisualizer/dvr_incore_baseline"
                 // TODO:    improve sampling loop (maybe use unroll with outside check?)
                 for (int iter = 0; iter < num_iterations; ++iter)
                 {
-                    float sampled_density;
-                    float4 src;
-                    sampled_density = tex3Dlod(_BrickCache, float4(accm_ray, 0.0f)).r;
-                    src = sampleTF1DColor(sampled_density);
+                    float sampled_density = tex3Dlod(_BrickCache, float4(accm_ray, 0.0f)).r;
+                    float4 src = sampleTF1DColor(sampled_density);
+                    // move to next sample point
+                    accm_ray += delta_step;
                     // blending
                     src.rgb *= src.a;
                     accm_color = (1.0f - accm_color.a) * src + accm_color;
-                    accm_ray += delta_step;
                     // early-ray-termination optimization technique
                     if (accm_color.a > _AlphaCutoff) break;
                 }
