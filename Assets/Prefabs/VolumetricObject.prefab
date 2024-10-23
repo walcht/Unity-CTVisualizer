@@ -92,12 +92,11 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6524694346905046297}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a77a710b3c0443afbbb7a95178b9ff2b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_AttachedMeshRenderer: {fileID: 4154116069845246419}
 --- !u!114 &6678064435525622475
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -113,4 +112,5 @@ MonoBehaviour:
   m_ScaleSpeed: 0.005
   m_ScaleSlowDown: 0.25
   m_MaxScale: 10
+  m_Rotate: 0
   m_RotationSpeed: 0.2

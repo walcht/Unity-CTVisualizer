@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace UnityCTVisualizer {
     public enum ColorDepth {
-        UINT8, UINT16, FLOAT16
+        UINT8, UINT16
     }
 
     public class UVDSMetadata {
@@ -32,11 +32,6 @@ namespace UnityCTVisualizer {
 
     public static class Importer {
         public static float SCALE_DEFAULT = -1.0f;
-        public static VolumetricDataset ImportUVDSDataset(string dataset_path) {
-            var volumetric_dataset = ScriptableObject.CreateInstance<VolumetricDataset>();
-            volumetric_dataset.DatasetPath = dataset_path;
-            return volumetric_dataset;
-        }
 
         public static void ImportMetadata(string dataset_path, ref UVDSMetadata metadata) {
             string metadata_fp;
@@ -97,14 +92,11 @@ namespace UnityCTVisualizer {
                         break;
                         case "colordepth":
                         switch (split[1]) {
-                            case "uint8":
+                            case "8":
                             metadata.ColourDepth = ColorDepth.UINT8;
                             break;
-                            case "uint16":
+                            case "16":
                             metadata.ColourDepth = ColorDepth.UINT16;
-                            break;
-                            case "float16":
-                            metadata.ColourDepth = ColorDepth.FLOAT16;
                             break;
                             default:
                             break;
@@ -198,18 +190,38 @@ namespace UnityCTVisualizer {
         /// should exist as a direct subdirectory of the UVDS path</param>
         /// 
         /// <returns>byte array of the requested chunk. TODO: describe the expected layout</returns>
-        public static byte[] ImportChunk(string dataset_path, UVDSMetadata metadata, int chunk_id, int resolution_lvl) {
-            var chunk_fp = Path.Combine(dataset_path, $"{resolution_lvl}", $"{chunk_id}.uvds");
-#if DEBUG
-            Debug.Log($"importing chunk: {chunk_id}, with size: {metadata.BrickSize} bytes, from path: {chunk_fp}");
-#endif
-            byte[] data = File.ReadAllBytes(chunk_fp);
+        /// 
+        public static bool ImportChunk(string dataset_path, out byte[] data, UVDSMetadata metadata, int chunk_id, int resolution_lvl) {
+            var chunk_fp = Path.Combine(dataset_path, $"chunk_{chunk_id}.uvds");
+            if (!File.Exists(chunk_fp)) {
+                data = null;
+                return false;
+            }
+            data = File.ReadAllBytes(chunk_fp);
+            return true;
+        }
+
+        public static bool ImportChunk(string dataset_path, ref UInt16[] data, UVDSMetadata metadata, int chunk_id, int resolution_lvl) {
+            string chunk_fp = Path.Combine(dataset_path, $"chunk_{chunk_id}.uvds");
+            if (!File.Exists(chunk_fp)) {
+                return false;
+            }
+            using (FileStream fs = File.OpenRead(chunk_fp)) {
+                int i = 0;
+                while (fs.Position < fs.Length) {
+                    UInt16 val = (UInt16)((fs.ReadByte() << 8) | fs.ReadByte());
+                    data[i] = val;
+                    ++i;
+                }
+            }
+            return true;
+            /*
             if (metadata.Lz4Compressed) {
                 byte[] decompressed_data = new byte[metadata.BrickSizeBytes];
                 LZ4Codec.Decode(source: data, target: decompressed_data);
                 return decompressed_data;
             }
-            return data;
+            */
         }
 
     }

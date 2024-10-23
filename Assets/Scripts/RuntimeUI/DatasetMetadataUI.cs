@@ -3,33 +3,27 @@ using UnityEngine;
 
 namespace UnityCTVisualizer {
     public class DatasetMetadataUI : MonoBehaviour {
-        [SerializeField]
-        TMP_InputField m_VolumeWidth;
+        [SerializeField] TMP_InputField m_OriginalVolumeWidth;
+        [SerializeField] TMP_InputField m_OriginalVolumeHeight;
+        [SerializeField] TMP_InputField m_OriginalNumberSlices;
 
-        [SerializeField]
-        TMP_InputField m_VolumeHeight;
+        [SerializeField] TMP_InputField m_BrickSize;
+        [SerializeField] TMP_InputField m_NbrbricksX;
+        [SerializeField] TMP_InputField m_NbrbricksY;
+        [SerializeField] TMP_InputField m_NbrbricksZ;
 
-        [SerializeField]
-        TMP_InputField m_NumberSlices;
+        [SerializeField] TMP_InputField m_ColorDepth;
 
-        [SerializeField]
-        TMP_InputField m_VolumeScaleX;
+        [SerializeField] TMP_InputField m_VolumeScaleX;
+        [SerializeField] TMP_InputField m_VolumeScaleY;
+        [SerializeField] TMP_InputField m_VolumeScaleZ;
 
-        [SerializeField]
-        TMP_InputField m_VolumeScaleY;
-
-        [SerializeField]
-        TMP_InputField m_VolumeScaleZ;
-
-        [SerializeField]
-        TMP_InputField m_DensityMin;
-
-        [SerializeField]
-        TMP_InputField m_DensityMax;
+        [SerializeField] TMP_InputField m_DensityMin;
+        [SerializeField] TMP_InputField m_DensityMax;
 
         void Awake() {
-            m_VolumeWidth.readOnly = true;
-            m_VolumeHeight.readOnly = true;
+            m_OriginalVolumeWidth.readOnly = true;
+            m_OriginalVolumeHeight.readOnly = true;
             m_VolumeScaleX.readOnly = true;
             m_VolumeScaleY.readOnly = true;
             m_VolumeScaleZ.readOnly = true;
@@ -46,12 +40,21 @@ namespace UnityCTVisualizer {
         ///     An imported UVDS dataset's metadata
         /// </param>
         public void Init(UVDSMetadata metadata) {
-            m_VolumeWidth.text = metadata.ImageWidth.ToString();
-            m_VolumeHeight.text = metadata.ImageHeight.ToString();
-            m_NumberSlices.text = metadata.NbrSlices.ToString();
+            m_OriginalVolumeWidth.text = metadata.OriginalImageWidth.ToString();
+            m_OriginalVolumeHeight.text = metadata.OriginalImageHeight.ToString();
+            m_OriginalNumberSlices.text = metadata.OriginalNbrSlices.ToString();
+
+            m_BrickSize.text = metadata.BrickSize.ToString();
+            m_NbrbricksX.text = metadata.NbrBricksX.ToString();
+            m_NbrbricksY.text = metadata.NbrBricksY.ToString();
+            m_NbrbricksZ.text = metadata.NbrBricksZ.ToString();
+
+            m_ColorDepth.text = $"{metadata.ColourDepth} BPP";
+
             m_VolumeScaleX.text = metadata.Scale.x.ToString("0.00");
             m_VolumeScaleY.text = metadata.Scale.y.ToString("0.00");
             m_VolumeScaleZ.text = metadata.Scale.z.ToString("0.00");
+
             m_DensityMin.text = metadata.DensityMin.ToString("0.00");
             m_DensityMax.text = metadata.DensityMax.ToString("0.00");
         }

@@ -48,8 +48,10 @@ namespace UnityCTVisualizer {
                 m_fp.text = dir_path;
                 VolumetricDataset volumetric_dataset;
                 try {
-                    volumetric_dataset = Importer.ImportUVDSDataset(dir_path, m_progress_handler);
-                } catch (FileLoadException) {
+                    volumetric_dataset = ScriptableObject.CreateInstance<VolumetricDataset>();
+                    volumetric_dataset.DatasetPath = dir_path;
+                } catch (FileLoadException e) {
+                    Debug.LogException(e);
                     return;
                 } catch (Exception e) {
                     Debug.LogException(e);

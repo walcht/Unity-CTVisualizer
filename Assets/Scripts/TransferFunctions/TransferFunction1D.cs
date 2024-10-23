@@ -29,10 +29,7 @@ namespace UnityCTVisualizer {
         public void Init() {
             // default color control points - default ramp function
             AddColorControlPoint(new(0.0f, Color.black));
-            AddColorControlPoint(new(0.20f, Color.black));
             AddColorControlPoint(new(0.20f, Color.red));
-            AddColorControlPoint(new(0.80f, Color.red));
-            AddColorControlPoint(new(0.80f, Color.white));
             AddColorControlPoint(new(1.00f, Color.white));
             // default alpha control points - default ramp function
             AddAlphaControlPoint(new(0.0f, 0.0f));

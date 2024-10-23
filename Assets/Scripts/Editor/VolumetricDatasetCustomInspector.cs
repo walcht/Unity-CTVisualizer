@@ -97,7 +97,7 @@ namespace UnityCTVisualizer
                     );
                     if (File.Exists(path))
                     {
-                        Importer.ImportUVDS(path, m_VolumetricDataset);
+                        // Importer.ImportUVDS(path, m_VolumetricDataset);
                     }
                     evt.StopPropagation();
                 }
@@ -105,8 +105,8 @@ namespace UnityCTVisualizer
             generate_densities_texture.RegisterCallback<ClickEvent>(
                 (ClickEvent evt) =>
                 {
-                    string exportPath = m_VolumetricDataset.ExportDensitiesTexture();
-                    Debug.Log($"exported densities Texture3D to: {exportPath}");
+                    // string exportPath = m_VolumetricDataset.ExportDensitiesTexture();
+                    // Debug.Log($"exported densities Texture3D to: {exportPath}");
                     evt.StopPropagation();
                 }
             );

@@ -12,47 +12,20 @@ namespace UnityCTVisualizer {
         ///////////////////////////////// IN-CURRENT or IN-CHILDREN REFERENCES //////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        [SerializeField]
-        RawImage m_HistogramImage;
-
-        [SerializeField]
-        RectTransform m_HistogramTransform;
-
-        [SerializeField]
-        HistogramUI m_HistogramUI;
-
-        [SerializeField]
-        RectTransform m_ColorGradientControlRange;
-
-        [SerializeField]
-        RawImage m_GradientColorImage;
-
-        [SerializeField]
-        ColorGradientRangeUI m_GradientColorUI;
-
-        [SerializeField]
-        Button m_RemoveAlpha;
-
-        [SerializeField]
-        Button m_RemoveColor;
-
-        [SerializeField]
-        Button m_ClearColors;
-
-        [SerializeField]
-        Button m_ClearAlphas;
-
-        [SerializeField]
-        ColorPickerButton m_ColorPicker;
-
-        [SerializeField]
-        ColorPickerWrapper m_ColorPickerWrapper;
-
-        [SerializeField]
-        RectTransform m_TF1DCanvasTransform;
-
-        [SerializeField]
-        RectTransform m_ColorPickerTransform;
+        [SerializeField] RawImage m_HistogramImage;
+        [SerializeField] RectTransform m_HistogramTransform;
+        [SerializeField] HistogramUI m_HistogramUI;
+        [SerializeField] RectTransform m_ColorGradientControlRange;
+        [SerializeField] RawImage m_GradientColorImage;
+        [SerializeField] ColorGradientRangeUI m_GradientColorUI;
+        [SerializeField] Button m_RemoveAlpha;
+        [SerializeField] Button m_RemoveColor;
+        [SerializeField] Button m_ClearColors;
+        [SerializeField] Button m_ClearAlphas;
+        [SerializeField] ColorPickerButton m_ColorPicker;
+        [SerializeField] ColorPickerWrapper m_ColorPickerWrapper;
+        [SerializeField] RectTransform m_TF1DCanvasTransform;
+        [SerializeField] RectTransform m_ColorPickerTransform;
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////// PREFABS /////////////////////////////////////////////
@@ -78,8 +51,6 @@ namespace UnityCTVisualizer {
         int ALPHA_COUNT_SHADER_ID = Shader.PropertyToID("_AlphaCount");
         int ALPHA_POSITIONS_SHADER_ID = Shader.PropertyToID("_AlphaPositions");
         int ALPHA_VALUES_SHADER_ID = Shader.PropertyToID("_AlphaValues");
-
-        VolumetricDataset m_VolumetricDataset = null;
 
         // -1 means None is selected which in turn means that we have no control points (empty list)
         int m_CurrColorControlPointID = -1;
@@ -107,12 +78,8 @@ namespace UnityCTVisualizer {
             m_ColorPickerWrapper.gameObject.SetActive(false);
         }
 
-        public void Init(
-            TransferFunction1D transferFunctionData,
-            VolumetricDataset volumetricDataset
-        ) {
+        public void Init(TransferFunction1D transferFunctionData) {
             m_TransferFunctionData = transferFunctionData;
-            m_VolumetricDataset = volumetricDataset;
             m_ColorControlPoints.Clear();
             // synchronize control points UI array with underlying transfer function data
             foreach (var colorCpID in m_TransferFunctionData.ColorControlPointIDs()) {
@@ -140,7 +107,7 @@ namespace UnityCTVisualizer {
             m_TransferFunctionData.TryUpdateColorLookupTexture();
             // initialize histogram shader properties and request histogram texture
             OnAlphaControlPointDataChange();
-            m_VolumetricDataset.TryUpdateDensityFreqTexture();
+            // m_VolumetricDataset.TryUpdateDensityFreqTexture();
         }
 
         void AddColorControlPoint(ControlPoint<float, Color> cp) {

@@ -1,21 +1,26 @@
 ﻿// #define IN_CORE
 
 using System;
-using System.Collections;
-using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace UnityCTVisualizer {
 
     /// <summary>
-    ///     Serializable wrapper around a volumetric dataset
+    ///     Serializable wrapper around a volumetric dataset and its visualization
+    ///     parameters.
     /// </summary>
     ///
     /// <remarks>
     ///     Includes metadata about the volume dataset, its visualization parameters,
     ///     and other configurable parameters. Once tweaked for optimal performance/visual quality
     ///     tradeoff, this can be saved (i.e., serialized) for later use.
+    ///     It is not a good idea to store and serialize the brick cache here (i.e., the Texture3D
+    ///     object(s)) since the brick cache is visualization-driven and usually is of very large
+    ///     size.
     /// </remarks>
     [CreateAssetMenu(
         fileName = "volumetric_dataset",
@@ -23,43 +28,72 @@ namespace UnityCTVisualizer {
     )]
     public class VolumetricDataset : ScriptableObject {
 
-        [DllImport("RenderingPlugin")]
-        private static extern void SendBrickDataToGPU(
-            System.IntPtr texture,
-            System.Int32 tex_width,
-            System.Int32 tex_height,
-            System.Int32 tex_depth,
-            System.Int32 x_offset,
-            System.Int32 y_offset,
-            System.Int32 z_offset,
-            System.Int32 brick_width,
-            System.Int32 brick_height,
-            System.Int32 brick_depth,
-            System.IntPtr data
-        );
+        /////////////////////////////////
+        // CONSTANTS
+        /////////////////////////////////
+        // public readonly int MAX_NBR_BRICK_CACHE_TEXTURES = 8;
+        public readonly long MIN_BRICK_SIZE = (long)Math.Pow(32, 3);
+        public readonly long MAX_BRICK_SIZE = (long)Math.Pow(128, 3);
+        public readonly long MAX_BRICKS_CACHE_NBR_BRICKS = 32768; // == 2048^3 / 32^3
+        public readonly long MAX_CACHE_USAGE_REPORTING_SIZE = 1024; // == 32768 / 32 of uint32 => 512 KB
+        public readonly int BRICK_CACHE_MISSES_WINDOW = 128 * 128;
+        public readonly int MEMORY_CACHE_MB = 4096;
+        public float BRICK_CACHE_SIZE_MB;
 
-        public IProgressHandler ProgressHandler { get; set; }
-        private UVDSMetadata m_metadata = new();
-        public UVDSMetadata Metadata { get => m_metadata; }
+        /////////////////////////////////
+        // VISUALIZATION PARAMETERS
+        /////////////////////////////////
+        private float m_AlphaCutoff = 254.0f / 255.0f;
+        public float AlphaCutoff {
+            get => m_AlphaCutoff; set {
+                m_AlphaCutoff = value;
+                VisualizationParametersEvents.ModelAlphaCutoffChange?.Invoke(value);
+            }
+        }
+        private MaxIterations m_MaxIterations = MaxIterations._1024;
+        public MaxIterations MaxIterations {
+            get => m_MaxIterations; set {
+                m_MaxIterations = value;
+                VisualizationParametersEvents.ModelMaxIterationsChange?.Invoke(value);
+            }
+        }
+        private INTERPOLATION m_Interpolation = INTERPOLATION.TRILLINEAR;
+        public INTERPOLATION InterpolationMethode {
+            get => m_Interpolation; set {
+                m_Interpolation = value;
+                VisualizationParametersEvents.ModelInterpolationChange?.Invoke(value);
+            }
+        }
 
+        private TF m_CurrentTF = TF.TF1D;
+        private Dictionary<TF, ITransferFunction> m_TransferFunctions;
+        public TF TransferFunction {
+            set {
+                m_CurrentTF = value;
+                ITransferFunction tf_so;
+                if (!m_TransferFunctions.TryGetValue(value, out tf_so)) {
+                    tf_so = TransferFunctionFactory.Create(value);
+                    m_TransferFunctions.Add(m_CurrentTF, tf_so);
+                }
+                VisualizationParametersEvents.ModelTFChange?.Invoke(m_CurrentTF, tf_so);
+            }
+        }
 
-        // bricks-cache related
-#if IN_CORE
+        public void DispatchVisualizationParamsChangeEvents() {
+            VisualizationParametersEvents.ModelTFChange?.Invoke(m_CurrentTF, m_TransferFunctions[m_CurrentTF]);
+            VisualizationParametersEvents.ModelAlphaCutoffChange?.Invoke(m_AlphaCutoff);
+            VisualizationParametersEvents.ModelInterpolationChange?.Invoke(m_Interpolation);
+            VisualizationParametersEvents.ModelMaxIterationsChange?.Invoke(m_MaxIterations);
+        }
+
+        /////////////////////////////////
+        // PARAMETERS
+        /////////////////////////////////
         private Vector3Int m_brick_cache_size;
         public Vector3Int BrickCacheSize { get => m_brick_cache_size; }
-#else
-        private Vector3Int m_brick_cache_size = new(1024, 1024, 1024);
-        public Vector3Int BrickCacheSize { get => m_brick_cache_size; set { m_brick_cache_size = value; } }
-#endif
-        private Texture3D m_brick_cache;
-        public Texture3D BrickCacheTex { get => m_brick_cache; }
-        private IntPtr m_brick_cache_ptr;
-        private TextureFormat m_format;
 
-        // visualization parameters
-
-        [SerializeField]
-        Texture3D m_densities_gradient_sampler = null;
+        private UVDSMetadata m_metadata = new();
+        public UVDSMetadata Metadata { get => m_metadata; }
 
         [SerializeField]
         private string m_dataset_path;
@@ -68,47 +102,14 @@ namespace UnityCTVisualizer {
             set {
                 m_dataset_path = value;
                 Importer.ImportMetadata(m_dataset_path, ref m_metadata);
-#if IN_CORE
-                m_brick_cache_size = new Vector3Int(m_metadata.ImageWidth, m_metadata.ImageHeight, m_metadata.NbrSlices);
-#endif
-                if (m_metadata.ColourDepth == ColorDepth.UINT8) {
-                    m_format = TextureFormat.R8;
-                } else if (m_metadata.ColourDepth == ColorDepth.FLOAT16) {
-                    m_format = SystemInfo.SupportsTextureFormat(TextureFormat.RHalf) ? TextureFormat.RHalf : TextureFormat.RFloat;
-                } else {
-                    // TODO: add appropriate throw exception
-                    throw new Exception("TODO");
-                }
-
-                // TODO: handle unsufficient memory exceptions
-                m_brick_cache = new Texture3D(
-                    m_brick_cache_size.x,
-                    m_brick_cache_size.y,
-                    m_brick_cache_size.z,
-                    m_format,
-                    mipChain: false,
-                    createUninitialized: true
+                m_brick_cache_size = new Vector3Int(
+                    m_metadata.NbrBricksX * m_metadata.BrickSize,
+                    m_metadata.NbrBricksY * m_metadata.BrickSize,
+                    m_metadata.NbrBricksZ * m_metadata.BrickSize
                 );
-                m_brick_cache.filterMode = FilterMode.Bilinear;
-                m_brick_cache_ptr = m_brick_cache.GetNativeTexturePtr();
-                if (m_brick_cache_ptr == IntPtr.Zero) {
-                    throw new NullReferenceException("native bricks cache pointer is nullptr" +
-                        "make sure that your platform support native code plug-ins");
-                }
-#if IN_CORE
-                // construct 
-#endif
+                BRICK_CACHE_SIZE_MB = (m_brick_cache_size.x / 1024.0f) * (m_brick_cache_size.y / 1024.0f) * m_brick_cache_size.z *
+                    (m_metadata.ColourDepth == ColorDepth.UINT16 ? 2.0f : 1.0f);
             }
-        }
-
-
-        public Texture3D GetDensitiesGradientSampler {
-            get {
-                if (m_densities_gradient_sampler == null) { }
-                // GenerateGradientMagnitudeVolume();
-                return m_densities_gradient_sampler;
-            }
-            private set { m_densities_gradient_sampler = value; }
         }
 
         /*
@@ -162,14 +163,31 @@ namespace UnityCTVisualizer {
         *
         */
 
-        public Vector3Int ComputeVolumeOffset(int brick_id, int resolution_lvl) {
-            int nbr_bricks_x_axis_res_lvl = (m_metadata.NbrBricksX >> resolution_lvl) + (m_metadata.NbrBricksX & 1);
-            int nbr_bricks_z_axis_res_lvl = (m_metadata.NbrBricksZ >> resolution_lvl) + (m_metadata.NbrBricksZ & 1);
-            return new(
-                (brick_id % nbr_bricks_x_axis_res_lvl) * m_metadata.BrickSize,
-                (brick_id % (nbr_bricks_x_axis_res_lvl * nbr_bricks_z_axis_res_lvl)) * m_metadata.BrickSize,
-                ((brick_id / nbr_bricks_x_axis_res_lvl) % nbr_bricks_z_axis_res_lvl) * m_metadata.BrickSize
-           );
+        public void ComputeVolumeOffset(UInt32 brick_id, out int x, out int y, out int z) {
+            int brick_id_in_res_lvl = (int)(brick_id & 0x03FFFFFF);
+            int resolution_lvl = (int)(brick_id >> 26);
+            int brick_size = m_metadata.BrickSize;
+            int nbr_bricks_x_axis_res_lvl = m_metadata.NbrBricksX;
+            int nbr_bricks_y_axis_res_lvl = m_metadata.NbrBricksY;
+            if (resolution_lvl > 0) {
+                nbr_bricks_x_axis_res_lvl = (m_metadata.NbrBricksX >> resolution_lvl) + (m_metadata.NbrBricksX & 1);
+                nbr_bricks_y_axis_res_lvl = (m_metadata.NbrBricksY >> resolution_lvl) + (m_metadata.NbrBricksY & 1);
+            }
+            x = brick_size * (brick_id_in_res_lvl % nbr_bricks_x_axis_res_lvl);
+            y = brick_size * ((brick_id_in_res_lvl / nbr_bricks_x_axis_res_lvl) % nbr_bricks_y_axis_res_lvl);
+            z = brick_size * (brick_id_in_res_lvl / (nbr_bricks_x_axis_res_lvl * nbr_bricks_y_axis_res_lvl));
+        }
+        public void ComputeVolumeOffset(int brick_id, int resolution_lvl, out int x, out int y, out int z) {
+            int brick_size = m_metadata.BrickSize;
+            int nbr_bricks_x_axis_res_lvl = m_metadata.NbrBricksX;
+            int nbr_bricks_y_axis_res_lvl = m_metadata.NbrBricksY;
+            if (resolution_lvl > 0) {
+                nbr_bricks_x_axis_res_lvl = (m_metadata.NbrBricksX >> resolution_lvl) + (m_metadata.NbrBricksX & 1);
+                nbr_bricks_y_axis_res_lvl = (m_metadata.NbrBricksY >> resolution_lvl) + (m_metadata.NbrBricksY & 1);
+            }
+            x = brick_size * (brick_id % nbr_bricks_x_axis_res_lvl);
+            y = brick_size * ((brick_id / nbr_bricks_x_axis_res_lvl) % nbr_bricks_y_axis_res_lvl);
+            z = brick_size * (brick_id / (nbr_bricks_x_axis_res_lvl * nbr_bricks_y_axis_res_lvl));
         }
 
         /// <summary>
@@ -190,26 +208,90 @@ namespace UnityCTVisualizer {
         ///     
         ///
         /// </remarks>
-        public IEnumerator LoadBrick(Vector3Int brick_cache_offset, byte[] brick_data) {
-            // wait until current frame rendering is done because manipulating GPU data while rendering might be dangerous
-            yield return new WaitForEndOfFrame();
-            // make sure GC doesn't change location of brick data in memory (i.e., pinned)
-            GCHandle gc_brick_data = GCHandle.Alloc(brick_data, GCHandleType.Pinned);
-            SendBrickDataToGPU(
-                m_brick_cache_ptr,
-                m_brick_cache_size.x,
-                m_brick_cache_size.y,
-                m_brick_cache_size.z,
-                brick_cache_offset.x,
-                brick_cache_offset.y,
-                brick_cache_offset.z,
-                m_metadata.BrickSize,
-                m_metadata.BrickSize,
-                m_metadata.BrickSize,
-                gc_brick_data.AddrOfPinnedObject()
-            );
-            // GC, do whatever you want now ...
-            gc_brick_data.Free();
+        public void LoadBrick(Vector3Int brick_cache_offset, byte[] brick_data) { }
+
+        public void LoadAllBricksIntoCache(MemoryCache<UInt16> cache, ConcurrentQueue<UInt32> brick_reply_queue, IProgressHandler progressHandler = null) {
+            if (progressHandler != null) {
+                progressHandler.Progress = 0;
+                // progressHandler.Message = $"loading {m_metadata.TotalNbrBricks} bricks";
+            }
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            Parallel.For(0, m_metadata.TotalNbrBricks, new ParallelOptions() {
+                TaskScheduler = new LimitedConcurrencyLevelTaskScheduler(Environment.ProcessorCount - 2)
+            }, i => {
+                // load a chunk of a UVDS test dataset
+                UInt16[] data = new UInt16[m_metadata.BrickSize * m_metadata.BrickSize * m_metadata.BrickSize];
+                if (!Importer.ImportChunk(m_dataset_path, ref data, m_metadata, i, 0)) {
+                    UnityEngine.Debug.LogError("could not import chunk");
+                    return;
+                }
+                cache.Set((uint)i, new CacheEntry<UInt16>(data, 0, 0));
+                brick_reply_queue.Enqueue((UInt32)i);
+                if (progressHandler != null) {
+                    progressHandler.Progress += 1.0f / m_metadata.TotalNbrBricks;
+                }
+            });
+            stopwatch.Stop();
+            UnityEngine.Debug.Log($"uploading to cache took: {stopwatch.Elapsed}s");
+        }
+
+        public void LoadAllBricksIntoCache(MemoryCache<byte> cache, ConcurrentQueue<UInt32> brick_reply_queue, IProgressHandler progressHandler = null) {
+            if (progressHandler != null) {
+                progressHandler.Progress = 0;
+                // progressHandler.Message = $"loading {m_metadata.TotalNbrBricks} bricks";
+            }
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            Parallel.For(0, m_metadata.TotalNbrBricks, new ParallelOptions() {
+                TaskScheduler = new LimitedConcurrencyLevelTaskScheduler(Environment.ProcessorCount - 2)
+            }, i => {
+                // load a chunk of a UVDS test dataset
+                byte[] data;
+                if (!Importer.ImportChunk(m_dataset_path, out data, m_metadata, i, 0)) {
+                    UnityEngine.Debug.LogError("could not import chunk");
+                    return;
+                }
+                cache.Set((uint)i, new CacheEntry<byte>(data, 0, 0));
+                brick_reply_queue.Enqueue((UInt32)i);
+                if (progressHandler != null) {
+                    progressHandler.Progress += 1.0f / m_metadata.TotalNbrBricks;
+                }
+            });
+            stopwatch.Stop();
+            UnityEngine.Debug.Log($"uploading to cache took: {stopwatch.Elapsed}s");
+        }
+
+        private void OnEnable() {
+            if (m_TransferFunctions == null) {
+                m_TransferFunctions = new Dictionary<TF, ITransferFunction> { { TF.TF1D, TransferFunctionFactory.Create(TF.TF1D) } };
+            }
+
+            VisualizationParametersEvents.ViewTFChange += OnViewTFChange;
+            VisualizationParametersEvents.ViewAlphaCutoffChange += OnViewAlphaCutoffChange;
+            VisualizationParametersEvents.ViewMaxIterationsChange += OnViewMaxIterationsChange;
+            VisualizationParametersEvents.ViewInterpolationChange += OnViewInterpolationChange;
+        }
+
+        private void OnDisable() {
+            VisualizationParametersEvents.ViewTFChange -= OnViewTFChange;
+            VisualizationParametersEvents.ViewAlphaCutoffChange -= OnViewAlphaCutoffChange;
+            VisualizationParametersEvents.ViewMaxIterationsChange -= OnViewMaxIterationsChange;
+            VisualizationParametersEvents.ViewInterpolationChange -= OnViewInterpolationChange;
+        }
+
+        private void OnViewAlphaCutoffChange(float alphaCutoff) {
+            AlphaCutoff = Mathf.Clamp01(alphaCutoff);
+        }
+
+        private void OnViewMaxIterationsChange(MaxIterations maxIterations) {
+            MaxIterations = maxIterations;
+        }
+
+        private void OnViewInterpolationChange(INTERPOLATION interpolation) {
+            InterpolationMethode = interpolation;
+        }
+
+        private void OnViewTFChange(TF new_tf) {
+            TransferFunction = new_tf;
         }
     }
 }
