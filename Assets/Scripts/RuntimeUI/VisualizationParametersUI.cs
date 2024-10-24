@@ -1,111 +1,131 @@
-#define DEBUG_UI
 using System;
+using System.Runtime.InteropServices;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace UnityCTVisualizer
-{
-    public enum INTERPOLATION
-    {
+namespace UnityCTVisualizer {
+    public enum INTERPOLATION {
         NEAREST_NEIGHBOR = 0,
-        TRILINEAR_PRE_CLASSIFICATION,
-        TRILINEAR_POST_CLASSIFICATION,
+        TRILLINEAR,
+        // TRILINEAR_POST_CLASSIFICATION, - yields worse performance and worse visuals
     }
 
-    public class VisualizationParametersUI : MonoBehaviour
-    {
-        public event Action<TF> OnTransferFunctionChange;
-        public event Action<INTERPOLATION> OnInterpolationChange;
+    public enum MaxIterations {
+        _128 = 0,
+        _256,
+        _512,
+        _1024,
+        _2048,
+    }
 
-        [SerializeField]
-        TMP_Dropdown m_TFDropDown;
+    public class VisualizationParametersUI : MonoBehaviour {
 
-        [SerializeField]
-        ClampUI m_ClampMin;
+        /////////////////////////////////
+        // UI MODIFIERS
+        /////////////////////////////////
+        [SerializeField] TMP_Dropdown m_TFDropDown;
+        [SerializeField] Slider m_AlphaCutoffSlider;
+        [SerializeField] TMP_Dropdown m_InterpolationDropDown;
+        [SerializeField] TMP_Dropdown m_MaxIterationsDropDown;
 
-        [SerializeField]
-        ClampUI m_ClampMax;
-
-        [SerializeField]
-        Slider m_AlphaCutoff;
-
-        [SerializeField]
-        TMP_Dropdown m_InterpolationDropDown;
-
-        VolumetricDataset m_VolumetricDataset = null;
-        VolumetricObject m_VoumetricObject = null;
-
-        /////////////////////////////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////// CACHED COMPONENTS ////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        // previously selected transfer function
+        /////////////////////////////////
+        // CACHED COMPONENTS
+        /////////////////////////////////
         int m_PrevTFIndex = -1;
         int m_PrevInterIndex = -1;
+        int m_PrevMaxIterationsIndex = -1;
 
-        void Awake()
-        {
+
+        private void Awake() {
             m_TFDropDown.options.Clear();
-            foreach (string enumName in Enum.GetNames(typeof(TF)))
-            {
+            foreach (string enumName in Enum.GetNames(typeof(TF))) {
                 m_TFDropDown.options.Add(new TMP_Dropdown.OptionData(enumName));
             }
             m_TFDropDown.onValueChanged.AddListener(OnTFDropDownChange);
             m_InterpolationDropDown.options.Clear();
-            foreach (string enumName in Enum.GetNames(typeof(INTERPOLATION)))
-            {
-                m_InterpolationDropDown.options.Add(
-                    new TMP_Dropdown.OptionData(enumName.Replace("_", " ").ToLower())
-                );
+            foreach (string enumName in Enum.GetNames(typeof(INTERPOLATION))) {
+                m_InterpolationDropDown.options.Add(new TMP_Dropdown.OptionData(enumName.Replace("_", " ").ToLower()));
+            }
+            m_MaxIterationsDropDown.options.Clear();
+            foreach (string enumName in Enum.GetNames(typeof(MaxIterations))) {
+                m_MaxIterationsDropDown.options.Add(new TMP_Dropdown.OptionData(enumName.Replace("_", "")));
             }
             m_InterpolationDropDown.onValueChanged.AddListener(OnInterDropDownChange);
-            m_AlphaCutoff.onValueChanged.AddListener(OnAlphaCutoffChange);
+            m_AlphaCutoffSlider.onValueChanged.AddListener(OnAlphaCutoffSliderChange);
+            m_MaxIterationsDropDown.onValueChanged.AddListener(OnMaxIterationsDropDownChange);
         }
 
-        /// <summary>
-        /// Initializes the VolumetricDataset ScriptableObject this UI affects.
-        /// Call this exactly after initializing this component.
-        /// </summary>
-        /// <param name="volumetricDataset">Instance of VolumetricDataset ScriptableObject that this UI will affect its </param>
-        /// <param name="volumetricObject">The volumetric object that this UI will affect its rendering parameters</param>
-        public void Init(VolumetricDataset volumetricDataset, VolumetricObject volumetricObject)
-        {
-            m_VolumetricDataset = volumetricDataset;
-            m_VoumetricObject = volumetricObject;
-            m_AlphaCutoff.value = m_VoumetricObject.AlphaCutoff;
+        private void OnEnable() {
+            VisualizationParametersEvents.ModelTFChange += OnModelTFChange;
+            VisualizationParametersEvents.ModelAlphaCutoffChange += OnModelAlphaCutoffChange;
+            VisualizationParametersEvents.ModelMaxIterationsChange += OnModelMaxIterationsChange;
+            VisualizationParametersEvents.ModelInterpolationChange += OnModelInterpolationChange;
         }
 
-        public void SetTFDropDown(TF tf)
-        {
-            m_PrevTFIndex = m_TFDropDown.value;
-            m_TFDropDown.value = (int)tf;
+        private void OnDisable() {
+            VisualizationParametersEvents.ModelTFChange -= OnModelTFChange;
+            VisualizationParametersEvents.ModelAlphaCutoffChange -= OnModelAlphaCutoffChange;
+            VisualizationParametersEvents.ModelMaxIterationsChange -= OnModelMaxIterationsChange;
+            VisualizationParametersEvents.ModelInterpolationChange -= OnModelInterpolationChange;
         }
 
-        void OnTFDropDownChange(int tfIndex)
-        {
-            if (tfIndex != m_PrevTFIndex)
-            {
-                OnTransferFunctionChange?.Invoke((TF)tfIndex);
+        /////////////////////////////////
+        /// UI CALLBACKS (VIEW INVOKES)
+        /////////////////////////////////
+        private void OnTFDropDownChange(int tfIndex) {
+            if (tfIndex != m_PrevTFIndex) {
+                VisualizationParametersEvents.ViewTFChange?.Invoke((TF)tfIndex);
                 m_PrevTFIndex = tfIndex;
             }
         }
 
-        void OnInterDropDownChange(int interIndex)
-        {
-            if (interIndex != m_PrevInterIndex)
-            {
+        private void OnInterDropDownChange(int interIndex) {
+            if (interIndex != m_PrevInterIndex) {
                 m_PrevInterIndex = interIndex;
-                OnInterpolationChange?.Invoke((INTERPOLATION)interIndex);
+                VisualizationParametersEvents.ViewInterpolationChange?.Invoke((INTERPOLATION)interIndex);
             }
         }
 
-        void OnAlphaCutoffChange(float newVal)
-        {
-#if DEBUG_UI
-            Debug.Log($"Alpha cutoff change: {newVal}");
-#endif
-            m_VoumetricObject.AlphaCutoff = newVal;
+        private void OnMaxIterationsDropDownChange(int maxIterationsIndex) {
+            if (maxIterationsIndex != m_PrevMaxIterationsIndex) {
+                m_PrevMaxIterationsIndex = maxIterationsIndex;
+                VisualizationParametersEvents.ViewMaxIterationsChange?.Invoke(((MaxIterations)maxIterationsIndex));
+            }
+        }
+
+        private void OnAlphaCutoffSliderChange(float newVal) {
+            VisualizationParametersEvents.ViewAlphaCutoffChange?.Invoke(newVal);
+        }
+
+
+        /////////////////////////////////
+        /// MODEL CALLBACKS
+        /////////////////////////////////
+
+        private void OnModelTFChange(TF new_tf, ITransferFunction _) {
+            Debug.Log($"UI: {new_tf}");
+            // do NOT set using value otherwise infinite event callbacks will occur!
+            m_TFDropDown.SetValueWithoutNotify((int)new_tf);
+        }
+
+
+        private void OnModelAlphaCutoffChange(float value) {
+            Debug.Log($"UI: {value}");
+            // do NOT set using value otherwise infinite event callbacks will occur!
+            m_AlphaCutoffSlider.SetValueWithoutNotify(value);
+        }
+
+        private void OnModelMaxIterationsChange(MaxIterations value) {
+            Debug.Log($"UI: {value}");
+            // do NOT set using value otherwise infinite event callbacks will occur!
+            m_MaxIterationsDropDown.SetValueWithoutNotify((int)value);
+        }
+
+        private void OnModelInterpolationChange(INTERPOLATION value) {
+            Debug.Log($"UI: {value}");
+            // do NOT set using value otherwise infinite event callbacks will occur!
+            m_InterpolationDropDown.SetValueWithoutNotify((int)value);
         }
     }
 }

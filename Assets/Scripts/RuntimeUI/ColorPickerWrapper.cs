@@ -1,5 +1,5 @@
-using System;
 using HSVPicker;
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 

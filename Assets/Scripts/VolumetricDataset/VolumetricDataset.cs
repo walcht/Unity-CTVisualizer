@@ -1,359 +1,297 @@
+﻿// #define IN_CORE
+
 using System;
-using System.IO;
-using System.Linq;
-using UnityEditor;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using UnityEngine;
 
-namespace UnityCTVisualizer
-{
+namespace UnityCTVisualizer {
+
+    /// <summary>
+    ///     Serializable wrapper around a volumetric dataset and its visualization
+    ///     parameters.
+    /// </summary>
+    ///
+    /// <remarks>
+    ///     Includes metadata about the volume dataset, its visualization parameters,
+    ///     and other configurable parameters. Once tweaked for optimal performance/visual quality
+    ///     tradeoff, this can be saved (i.e., serialized) for later use.
+    ///     It is not a good idea to store and serialize the brick cache here (i.e., the Texture3D
+    ///     object(s)) since the brick cache is visualization-driven and usually is of very large
+    ///     size.
+    /// </remarks>
     [CreateAssetMenu(
         fileName = "volumetric_dataset",
         menuName = "UnityCTVisualizer/VolumetricDataset"
     )]
-    public class VolumetricDataset : ScriptableObject, IUVDS
-    {
-        public event Action<Texture2D> OnDensitiesFreqChange;
-        public event Action<Texture3D> OnDensitiesChange;
+    public class VolumetricDataset : ScriptableObject {
 
-        [SerializeField]
-        string m_DatasetPath;
-        public string DatasetPath
-        {
-            get => m_DatasetPath;
-            set { m_DatasetPath = value; }
+        /////////////////////////////////
+        // CONSTANTS
+        /////////////////////////////////
+        // public readonly int MAX_NBR_BRICK_CACHE_TEXTURES = 8;
+        public readonly long MIN_BRICK_SIZE = (long)Math.Pow(32, 3);
+        public readonly long MAX_BRICK_SIZE = (long)Math.Pow(128, 3);
+        public readonly long MAX_BRICKS_CACHE_NBR_BRICKS = 32768; // == 2048^3 / 32^3
+        public readonly long MAX_CACHE_USAGE_REPORTING_SIZE = 1024; // == 32768 / 32 of uint32 => 512 KB
+        public readonly int BRICK_CACHE_MISSES_WINDOW = 128 * 128;
+        public readonly int MEMORY_CACHE_MB = 4096;
+        public float BRICK_CACHE_SIZE_MB;
+
+        /////////////////////////////////
+        // VISUALIZATION PARAMETERS
+        /////////////////////////////////
+        private float m_AlphaCutoff = 254.0f / 255.0f;
+        public float AlphaCutoff {
+            get => m_AlphaCutoff; set {
+                m_AlphaCutoff = value;
+                VisualizationParametersEvents.ModelAlphaCutoffChange?.Invoke(value);
+            }
         }
-
-        [SerializeField]
-        ushort m_ImageWidth;
-        public ushort ImageWidth
-        {
-            get => m_ImageWidth;
-            set { m_ImageWidth = value; }
+        private MaxIterations m_MaxIterations = MaxIterations._1024;
+        public MaxIterations MaxIterations {
+            get => m_MaxIterations; set {
+                m_MaxIterations = value;
+                VisualizationParametersEvents.ModelMaxIterationsChange?.Invoke(value);
+            }
         }
-
-        [SerializeField]
-        ushort m_ImageHeight;
-        public ushort ImageHeight
-        {
-            get => m_ImageHeight;
-            set { m_ImageHeight = value; }
-        }
-
-        [SerializeField]
-        ushort m_NbrSlices;
-        public ushort NbrSlices
-        {
-            get => m_NbrSlices;
-            set { m_NbrSlices = value; }
-        }
-
-        [SerializeField]
-        Vector3 m_Scale;
-        public Vector3 Scale
-        {
-            get => m_Scale;
-            set { m_Scale = value; }
-        }
-
-        [SerializeField]
-        Vector3 m_EulerRotation;
-        public Vector3 EulerRotation
-        {
-            get => m_EulerRotation;
-            set { m_EulerRotation = value; }
-        }
-
-        [SerializeField]
-        float m_MinDensity = float.NegativeInfinity;
-        public float MinDensity
-        {
-            get => m_MinDensity;
-            set { m_MinDensity = value; }
-        }
-
-        [SerializeField]
-        float m_MaxDensity = float.PositiveInfinity;
-        public float MaxDensity
-        {
-            get => m_MaxDensity;
-            set { m_MaxDensity = value; }
-        }
-
-        [SerializeField]
-        float[] m_Densities;
-        public float[] Densities
-        {
-            get => m_Densities;
-            set
-            {
-                m_Densities = value;
-                m_DirtyFlagDensities = true;
-                m_DirtyFlagFrequencies = true;
+        private INTERPOLATION m_Interpolation = INTERPOLATION.TRILLINEAR;
+        public INTERPOLATION InterpolationMethode {
+            get => m_Interpolation; set {
+                m_Interpolation = value;
+                VisualizationParametersEvents.ModelInterpolationChange?.Invoke(value);
             }
         }
 
-        Texture3D m_DensitiesSampler = null;
-
-        [SerializeField]
-        Texture3D m_DensitiesGradientSampler = null;
-        public Texture3D GetDensitiesGradientSampler
-        {
-            get
-            {
-                if (m_DensitiesGradientSampler == null)
-                    GenerateGradientMagnitudeVolume();
-                return m_DensitiesGradientSampler;
-            }
-            private set { m_DensitiesGradientSampler = value; }
-        }
-
-        public const int HISTOGRAM_BINS = 512;
-        Texture2D m_DensitiesFrequenciesTex = null;
-
-        public bool IsVolumeGenerated()
-        {
-            return m_DensitiesSampler != null;
-        }
-
-        // if true it means the densities frequencies texture has to be re-generated when it is requested
-        private bool m_DirtyFlagFrequencies = true;
-
-        // if true it means the densities sample texture has to be re-generated when it is requested
-        private bool m_DirtyFlagDensities = true;
-
-        /// <summary>
-        /// Request an update for the internal density frequencies texture. This checks a dirty flag then
-        /// re-generates the texture if necessary. Intended workflow is to subscribe to
-        /// OnDensitiesFreqChange event to receive new the density frequencies texture and request textures
-        /// updates by calling this function.
-        /// </summary>
-        public void TryUpdateDensityFreqTexture()
-        {
-            if (m_DensitiesFrequenciesTex == null || m_DirtyFlagFrequencies)
-            {
-                GenerateDensitiesFreqTex();
-                return;
-            }
-        }
-
-        /// <summary>
-        /// Divides density range (after optional clamping) into HISTOGRAM_BINS bins.
-        /// </summary>
-        private void GenerateDensitiesFreqTex()
-        {
-            if (Densities == null)
-            {
-                Debug.LogError("Densities have to be initialized before calling this function.");
-                return;
-            }
-            if (m_DensitiesFrequenciesTex == null)
-            {
-                m_DensitiesFrequenciesTex = new Texture2D(
-                    HISTOGRAM_BINS,
-                    1,
-                    SystemInfo.SupportsTextureFormat(TextureFormat.RHalf)
-                        ? TextureFormat.RHalf
-                        : TextureFormat.RFloat,
-                    false
-                );
-                m_DensitiesFrequenciesTex.wrapMode = TextureWrapMode.Clamp;
-            }
-            float BIN_WIDTH = (m_MaxDensity - m_MinDensity) / HISTOGRAM_BINS;
-            int[] frequencies = new int[HISTOGRAM_BINS];
-            for (int i = 0; i < Densities.Length; ++i)
-            {
-                int freqIdx = (int)Mathf.Floor((Densities[i] - m_MinDensity) / BIN_WIDTH);
-                // happend when Densities[freqIdx] == MaxDensity
-                if (freqIdx == HISTOGRAM_BINS)
-                    --freqIdx;
-                try
-                {
-                    ++frequencies[freqIdx];
+        private TF m_CurrentTF = TF.TF1D;
+        private Dictionary<TF, ITransferFunction> m_TransferFunctions;
+        public TF TransferFunction {
+            set {
+                m_CurrentTF = value;
+                ITransferFunction tf_so;
+                if (!m_TransferFunctions.TryGetValue(value, out tf_so)) {
+                    tf_so = TransferFunctionFactory.Create(value);
+                    m_TransferFunctions.Add(m_CurrentTF, tf_so);
                 }
-                catch (System.Exception)
-                {
-                    Debug.Log($"Bin width: {BIN_WIDTH}");
-                    Debug.Log($"Max Density: {m_MaxDensity}, Min Density: {m_MinDensity}");
-                    Debug.Log(freqIdx);
-                    throw;
+                VisualizationParametersEvents.ModelTFChange?.Invoke(m_CurrentTF, tf_so);
+            }
+        }
+
+        public void DispatchVisualizationParamsChangeEvents() {
+            VisualizationParametersEvents.ModelTFChange?.Invoke(m_CurrentTF, m_TransferFunctions[m_CurrentTF]);
+            VisualizationParametersEvents.ModelAlphaCutoffChange?.Invoke(m_AlphaCutoff);
+            VisualizationParametersEvents.ModelInterpolationChange?.Invoke(m_Interpolation);
+            VisualizationParametersEvents.ModelMaxIterationsChange?.Invoke(m_MaxIterations);
+        }
+
+        /////////////////////////////////
+        // PARAMETERS
+        /////////////////////////////////
+        private Vector3Int m_brick_cache_size;
+        public Vector3Int BrickCacheSize { get => m_brick_cache_size; }
+
+        private UVDSMetadata m_metadata = new();
+        public UVDSMetadata Metadata { get => m_metadata; }
+
+        [SerializeField]
+        private string m_dataset_path;
+        public string DatasetPath {
+            get => m_dataset_path;
+            set {
+                m_dataset_path = value;
+                Importer.ImportMetadata(m_dataset_path, ref m_metadata);
+                m_brick_cache_size = new Vector3Int(
+                    m_metadata.NbrBricksX * m_metadata.BrickSize,
+                    m_metadata.NbrBricksY * m_metadata.BrickSize,
+                    m_metadata.NbrBricksZ * m_metadata.BrickSize
+                );
+                BRICK_CACHE_SIZE_MB = (m_brick_cache_size.x / 1024.0f) * (m_brick_cache_size.y / 1024.0f) * m_brick_cache_size.z *
+                    (m_metadata.ColourDepth == ColorDepth.UINT16 ? 2.0f : 1.0f);
+            }
+        }
+
+        /*
+        * 
+        *    expected brick layout from the imported UVDS:
+        * 
+        *                         Y
+        *                        ↗
+        *                 c111 .+------------------------------+ c110
+        *                    .' |                            .'|
+        *                  .'   |                          .'  |
+        *                .'     |                        .'    |
+        *              .'       |                      .'      |
+        *         Z  .'         |                    .'        |
+        *         ↑.'           |                  .'          |
+        *    c011 +-------------------------------+ c010       |
+        *         |             |                 |            |
+        *         |             |                 |            |
+        *         |             |                 |            |
+        *         |             |                 |            |
+        *         |        c100 +-----------------|------------+ c101
+        *         |          .'                   |          .'
+        *         |        .'                     |        .'
+        *         | * - - *                       |      .'
+        *         |- - -* |                       |    .'
+        *         |BRICK| |                       |  .'
+        *         | ID0 |'                        |.'
+        *    c000 +-------------+-----------------+ c001 ⟶  X
+        *     
+        *     bottom-left brick (c000) has ID 0, the next brick in that same (X, Z) brick
+        *     plane has ID 1 and so on until top right of  the same brick plane the first
+        *     brick exists in (c010) has ID:  (nbr_bricks_x_axis * nbr_bricks_z_axis) - 1
+        *     the same process repeats moving along the Y axis until last brick (at c110)
+        *     
+        *     Note:
+        *     nbr_bricks_[x,y,z]_axis reflects  the number of bricks  along an axis  in a
+        *     given resolution level. For example if  nbr_bricks_x_axis=11  is the number
+        *     of bricks along the X axis for resolution level 0 then the number of bricks
+        *     for the next resolution level (always along the X axis) is:
+        *
+        *       nbr_bricks_x_axis_res_lvl_1 = (nbr_bricks_x_axis / 2^1) +
+        *                                     (nbr_bricks_x_axis & 1)
+        *                                   = 6
+        *       
+        *     in case  nbr_bricks_x_axis is odd,  an extra padding brick  has to be added
+        *     for proper downsampling alignment. The above formula can be generalized for 
+        *     any resolution level l to the following:
+        *     
+        *       nbr_bricks_x_axis_res_lvl_l = (nbr_bricks_x_axis / 2^l) +
+        *                                     (nbr_bricks_x_axis & 1)
+        *
+        */
+
+        public void ComputeVolumeOffset(UInt32 brick_id, out int x, out int y, out int z) {
+            int brick_id_in_res_lvl = (int)(brick_id & 0x03FFFFFF);
+            int resolution_lvl = (int)(brick_id >> 26);
+            int brick_size = m_metadata.BrickSize;
+            int nbr_bricks_x_axis_res_lvl = m_metadata.NbrBricksX;
+            int nbr_bricks_y_axis_res_lvl = m_metadata.NbrBricksY;
+            if (resolution_lvl > 0) {
+                nbr_bricks_x_axis_res_lvl = (m_metadata.NbrBricksX >> resolution_lvl) + (m_metadata.NbrBricksX & 1);
+                nbr_bricks_y_axis_res_lvl = (m_metadata.NbrBricksY >> resolution_lvl) + (m_metadata.NbrBricksY & 1);
+            }
+            x = brick_size * (brick_id_in_res_lvl % nbr_bricks_x_axis_res_lvl);
+            y = brick_size * ((brick_id_in_res_lvl / nbr_bricks_x_axis_res_lvl) % nbr_bricks_y_axis_res_lvl);
+            z = brick_size * (brick_id_in_res_lvl / (nbr_bricks_x_axis_res_lvl * nbr_bricks_y_axis_res_lvl));
+        }
+        public void ComputeVolumeOffset(int brick_id, int resolution_lvl, out int x, out int y, out int z) {
+            int brick_size = m_metadata.BrickSize;
+            int nbr_bricks_x_axis_res_lvl = m_metadata.NbrBricksX;
+            int nbr_bricks_y_axis_res_lvl = m_metadata.NbrBricksY;
+            if (resolution_lvl > 0) {
+                nbr_bricks_x_axis_res_lvl = (m_metadata.NbrBricksX >> resolution_lvl) + (m_metadata.NbrBricksX & 1);
+                nbr_bricks_y_axis_res_lvl = (m_metadata.NbrBricksY >> resolution_lvl) + (m_metadata.NbrBricksY & 1);
+            }
+            x = brick_size * (brick_id % nbr_bricks_x_axis_res_lvl);
+            y = brick_size * ((brick_id / nbr_bricks_x_axis_res_lvl) % nbr_bricks_y_axis_res_lvl);
+            z = brick_size * (brick_id / (nbr_bricks_x_axis_res_lvl * nbr_bricks_y_axis_res_lvl));
+        }
+
+        /// <summary>
+        ///     Given a <paramref name="brick_id"/>, sends the respective volume brick to GPU's
+        ///     brick cache or to the densities texture in case OUT_OF_CORE is not set.
+        /// </summary>
+        ///
+        /// <remarks>
+        ///
+        ///     In case of in-core rendering (i.e., IN_CORE is set), the brick is simply loaded
+        ///     into its original offset in the volume. In case of out-of-core rendering, two
+        ///     scenarios arrise:
+        ///     
+        ///     <list type="number">
+        ///         <item>there an empty brick slot in the brick cache => just put the brick there</item>
+        ///         <item>there is not any empty brick slots => implement a cache replacement policy</item>
+        ///     </list>
+        ///     
+        ///
+        /// </remarks>
+        public void LoadBrick(Vector3Int brick_cache_offset, byte[] brick_data) { }
+
+        public void LoadAllBricksIntoCache(MemoryCache<UInt16> cache, ConcurrentQueue<UInt32> brick_reply_queue, IProgressHandler progressHandler = null) {
+            if (progressHandler != null) {
+                progressHandler.Progress = 0;
+                // progressHandler.Message = $"loading {m_metadata.TotalNbrBricks} bricks";
+            }
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            Parallel.For(0, m_metadata.TotalNbrBricks, new ParallelOptions() {
+                TaskScheduler = new LimitedConcurrencyLevelTaskScheduler(Environment.ProcessorCount - 2)
+            }, i => {
+                // load a chunk of a UVDS test dataset
+                UInt16[] data = new UInt16[m_metadata.BrickSize * m_metadata.BrickSize * m_metadata.BrickSize];
+                if (!Importer.ImportChunk(m_dataset_path, ref data, m_metadata, i, 0)) {
+                    UnityEngine.Debug.LogError("could not import chunk");
+                    return;
                 }
-            }
-            int freqMin = frequencies.Min();
-            float range = (float)(frequencies.Max() - freqMin);
-            if (SystemInfo.SupportsTextureFormat(TextureFormat.RHalf))
-            {
-                ushort[] normalizedFrequencies = new ushort[HISTOGRAM_BINS];
-                for (int j = 0; j < HISTOGRAM_BINS; ++j)
-                {
-                    normalizedFrequencies[j] = Mathf.FloatToHalf(
-                        (frequencies[j] - freqMin) / range
-                    );
+                cache.Set((uint)i, new CacheEntry<UInt16>(data, 0, 0));
+                brick_reply_queue.Enqueue((UInt32)i);
+                if (progressHandler != null) {
+                    progressHandler.Progress += 1.0f / m_metadata.TotalNbrBricks;
                 }
-                m_DensitiesFrequenciesTex.SetPixelData(normalizedFrequencies, 0);
+            });
+            stopwatch.Stop();
+            UnityEngine.Debug.Log($"uploading to cache took: {stopwatch.Elapsed}s");
+        }
+
+        public void LoadAllBricksIntoCache(MemoryCache<byte> cache, ConcurrentQueue<UInt32> brick_reply_queue, IProgressHandler progressHandler = null) {
+            if (progressHandler != null) {
+                progressHandler.Progress = 0;
+                // progressHandler.Message = $"loading {m_metadata.TotalNbrBricks} bricks";
             }
-            else
-            {
-                float[] normalizedFrequencies = new float[HISTOGRAM_BINS];
-                for (int j = 0; j < HISTOGRAM_BINS; ++j)
-                {
-                    normalizedFrequencies[j] = (frequencies[j] - freqMin) / range;
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            Parallel.For(0, m_metadata.TotalNbrBricks, new ParallelOptions() {
+                TaskScheduler = new LimitedConcurrencyLevelTaskScheduler(Environment.ProcessorCount - 2)
+            }, i => {
+                // load a chunk of a UVDS test dataset
+                byte[] data;
+                if (!Importer.ImportChunk(m_dataset_path, out data, m_metadata, i, 0)) {
+                    UnityEngine.Debug.LogError("could not import chunk");
+                    return;
                 }
-                m_DensitiesFrequenciesTex.SetPixelData(normalizedFrequencies, 0);
-            }
-            m_DensitiesFrequenciesTex.Apply();
-            m_DirtyFlagFrequencies = false;
-            OnDensitiesFreqChange?.Invoke(m_DensitiesFrequenciesTex);
-        }
-
-        /// <summary>
-        /// Request an update for the internal densities 3D texture. This checks a dirty flag then
-        /// re-generates the texture if necessary. Intended workflow is to subscribe to
-        /// OnDensitiesChange event to receive the new densities texture and request texture
-        /// updates by calling this function.
-        /// </summary>
-        public void TryGenerateDensitiesTexture()
-        {
-            if (m_DensitiesSampler == null || m_DirtyFlagDensities)
-            {
-                GenerateDensitiesTexture();
-            }
-        }
-
-        /// <summary>
-        /// Generates volume densities (Texture3D) according to volume generation settings
-        /// </summary>
-        private void GenerateDensitiesTexture()
-        {
-            if (Densities == null)
-            {
-                Debug.LogError(
-                    "densities array has to be initialized before generating the Texture3D"
-                );
-                return;
-            }
-            if (SystemInfo.SupportsTextureFormat(TextureFormat.RHalf))
-            {
-#if DEBUG
-                Debug.Log("Supported TextureFormat is: RHalf (16 bit float)");
-#endif
-                m_DensitiesSampler = new Texture3D(
-                    ImageWidth,
-                    ImageHeight,
-                    NbrSlices,
-                    TextureFormat.RHalf,
-                    false
-                );
-                ushort[] pixelData = new ushort[Densities.Length];
-                for (int i = 0; i < Densities.Length; ++i)
-                {
-                    pixelData[i] = Mathf.FloatToHalf(
-                        (Densities[i] - m_MinDensity) / (m_MaxDensity - m_MinDensity)
-                    );
+                cache.Set((uint)i, new CacheEntry<byte>(data, 0, 0));
+                brick_reply_queue.Enqueue((UInt32)i);
+                if (progressHandler != null) {
+                    progressHandler.Progress += 1.0f / m_metadata.TotalNbrBricks;
                 }
-                m_DensitiesSampler.SetPixelData(pixelData, 0);
-            }
-            else
-            {
-#if DEBUG
-                Debug.Log("Supported TextureFormat is: RFloat (32 bit float)");
-#endif
-                m_DensitiesSampler = new Texture3D(
-                    ImageWidth,
-                    ImageHeight,
-                    NbrSlices,
-                    TextureFormat.RFloat,
-                    false
-                );
-                float[] pixelData = new float[Densities.Length];
-                for (int i = 0; i < Densities.Length; ++i)
-                {
-                    pixelData[i] = (Densities[i] - m_MinDensity) / (m_MaxDensity - m_MinDensity);
-                }
-                m_DensitiesSampler.SetPixelData(pixelData, 0);
-            }
-            m_DensitiesSampler.wrapMode = TextureWrapMode.Clamp;
-            m_DensitiesSampler.Apply();
-            m_DirtyFlagDensities = false;
-            OnDensitiesChange?.Invoke(m_DensitiesSampler);
+            });
+            stopwatch.Stop();
+            UnityEngine.Debug.Log($"uploading to cache took: {stopwatch.Elapsed}s");
         }
 
-        /// <summary>
-        /// Exports generated volume densities texture
-        /// </summary>
-        public string ExportDensitiesTexture(string exportPath = null)
-        {
-            if (m_DensitiesSampler == null)
-            {
-                TryGenerateDensitiesTexture();
+        private void OnEnable() {
+            if (m_TransferFunctions == null) {
+                m_TransferFunctions = new Dictionary<TF, ITransferFunction> { { TF.TF1D, TransferFunctionFactory.Create(TF.TF1D) } };
             }
-            if (exportPath == null)
-            {
-                System.DateTime centuryBegin = new System.DateTime(2024, 1, 1);
-                System.DateTime currentDate = System.DateTime.Now;
-                long elapsedTicks = (long)((currentDate.Ticks - centuryBegin.Ticks) / 10000.0f);
-                exportPath =
-                    "Assets/GeneratedTextures/densities_texture_"
-                    + $"{Path.GetFileNameWithoutExtension(m_DatasetPath)}_{elapsedTicks}";
-                AssetDatabase.CreateAsset(m_DensitiesSampler, exportPath);
-                return exportPath;
-            }
-            AssetDatabase.CreateAsset(m_DensitiesSampler, exportPath);
-            return exportPath;
+
+            VisualizationParametersEvents.ViewTFChange += OnViewTFChange;
+            VisualizationParametersEvents.ViewAlphaCutoffChange += OnViewAlphaCutoffChange;
+            VisualizationParametersEvents.ViewMaxIterationsChange += OnViewMaxIterationsChange;
+            VisualizationParametersEvents.ViewInterpolationChange += OnViewInterpolationChange;
         }
 
-        /// <summary>
-        /// Exports generated gradient magnitude volume texture
-        /// </summary>
-        /// <param name="exportPath">if not provided will export to Assets/GeneratedTextures/. Uses
-        /// this provided path otherwise</param>
-        public void ExportGradientMagnitudeTexture(string exportPath = null)
-        {
-            // TODO: [Adrienne] can you try to implement this? It is very similar to
-            // ExportDensitiesTexture method.
+        private void OnDisable() {
+            VisualizationParametersEvents.ViewTFChange -= OnViewTFChange;
+            VisualizationParametersEvents.ViewAlphaCutoffChange -= OnViewAlphaCutoffChange;
+            VisualizationParametersEvents.ViewMaxIterationsChange -= OnViewMaxIterationsChange;
+            VisualizationParametersEvents.ViewInterpolationChange -= OnViewInterpolationChange;
         }
 
-        /// <summary>
-        /// Accesses the flattened densities array in a volumetric-coordinate-system manner
-        /// </summary>
-        public float AccessVolumeXYZ(int x, int y, int z)
-        {
-            return Densities[z * ImageWidth * ImageHeight + (ImageWidth * y) + x];
+        private void OnViewAlphaCutoffChange(float alphaCutoff) {
+            AlphaCutoff = Mathf.Clamp01(alphaCutoff);
         }
 
-        /// <summary>
-        /// Generates volume gradient magnitude (Texture3D) from flattened densities array
-        /// </summary>
-        public void GenerateGradientMagnitudeVolume()
-        {
-            if (Densities == null)
-            {
-                Debug.LogError(
-                    "densities array has to be initialized before generating the Texture3D"
-                );
-                return;
-            }
-            // TODO:    [Adrienne] can you implement this function to generate a Texture3D of gradient
-            //          magnitudes?
-            if (SystemInfo.SupportsTextureFormat(TextureFormat.RHalf))
-            {
-                m_DensitiesSampler = new Texture3D(
-                    ImageWidth,
-                    ImageHeight,
-                    NbrSlices,
-                    TextureFormat.RHalf,
-                    false
-                );
-            }
-            else
-            {
-                m_DensitiesSampler = new Texture3D(
-                    ImageWidth,
-                    ImageHeight,
-                    NbrSlices,
-                    TextureFormat.RFloat,
-                    false
-                );
-            }
+        private void OnViewMaxIterationsChange(MaxIterations maxIterations) {
+            MaxIterations = maxIterations;
+        }
+
+        private void OnViewInterpolationChange(INTERPOLATION interpolation) {
+            InterpolationMethode = interpolation;
+        }
+
+        private void OnViewTFChange(TF new_tf) {
+            TransferFunction = new_tf;
         }
     }
 }

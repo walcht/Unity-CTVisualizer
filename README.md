@@ -5,12 +5,16 @@
   - [Workflow](#workflow)
   - [Installation](#installation)
   - [Usage](#usage)
+  - [Project Structure](#project-structure)
+  - [Optimization Techniques](#optimization-techniques)
+    - [Empty space skipping](#empty-space-skipping)
+    - [Early ray termination](#early-ray-termination)
   - [Performance Statistics](#performance-statistics)
-  - [Limitations](#limitations)
+  - [TODOs](#todos)
   - [License](#license)
 <!--toc:end-->
 
-A Unity3D package for efficiently visualizing and manipulating (mostly)
+A Unity3D package for efficiently visualizing and manipulating large-scale (mostly)
 medical volumetric data.
 
 ![unity-ct-visualizer-00](https://github.com/walcht/Unity-CTVisualizer/assets/89390465/6084fb58-689a-4cf9-97f4-b84a0e262e9a)
@@ -122,50 +126,11 @@ TODO
 ## Optimization Techniques
 
 ### Empty space skipping
-In this optimization technique, we define volume levels that determine how many cells the volume should be subdivided into. At level zero, we divide the volume into ![equation](https://latex.codecogs.com/svg.image?{\color{White}N\times&space;N\times&space;N}) cells, where ![equation](https://latex.codecogs.com/svg.image?{\color{White}N=2^{M}}). Here, ![equation](https://latex.codecogs.com/svg.image?{\color{White}M&plus;1}) represents the number of levels, and the levels are indexed from 0 to ![equation](https://latex.codecogs.com/svg.image?{\color{White}M}). On level one, we increase the size of cells so that each cell is equal in size to eight cells from the previous level. On this level, the volume is divided into ![equation](https://latex.codecogs.com/svg.image?{\color{White}\frac{N}{2}\times\frac{N}{2}\times\frac{N}{2}}) cells. We repeat this process for each level until the volume contains only one cell.
-<p>
-<figure>
-<img src="Documentation/1empty_space_skipping.png" alt="Hierarchical enumeration of object space for N = 5." width="400">
-<figcaption>1. Hierarchical enumeration of object space for N = 4 cells and M = 3 levels.</figcaption>
-</figure>
-</p>
-
-We treat voxels as points located on the vertices of cells, each having opacity and color. On level zero, the value of a cell is zero if all eight voxels on its vertices have an opacity of zero. On a higher level `m` (`m > 0`), a cell contains a zero if all eight cells that make up this cell on level `m - 1` contain zeros.
-
-The empty space skipping algorithm starts on the top level ![equation](https://latex.codecogs.com/svg.image?{\color{White}M}). When the ray enters the cell, we check its value. If the value of the cell is zero, we determine the next cell on the same level by following the ray. If the parent of the next cell and the parent of the current cell are different, we move up to the parent of the next cell, otherwise we move to the next cell following the ray. This makes it possible to quickly progress through empty spaces. 
-If the the value of a cell is one, we move down one level. When we reach the lowest level, we know that at least one of the voxels located on the vertices of the cell has an opacity value greater than 0. We sample the ray section that falls within this cell. We approximate the color and opacity of each sample point by trilinearly interpolating the color and opacity values of the eight surrounding voxels.
-<p>
-<figure>
-<img src="Documentation/2empty_space_skipping.png" alt="Ray tracing of hierarchical enumeration." width="400">
-<figcaption>2. Ray tracing of hierarchical enumeration.</figcaption>
-</figure>
-</p>
-
-<p>
-<figure>
-<img src="Documentation/3interpolation.png" alt="Ray tracing of hierarchical enumeration." width="400">
-<figcaption>3. Trilinear interpolation</figcaption>
-</figure>
-</p>
+TODO
 
 ### Early ray termination
 
-In early ray termination, sampling along a ray is stopped when the accumulated opacity of the ray reaches a set threshold. This indicates that a sufficiently dense material has been reached, so further sampling doesn't significantly affect the pixel color.
-
-<p>
-<figure>
-<img src="Documentation/4early_ray_termination.png" alt="4. Volumetric compositioning" height="160">
-<figcaption>4. Volumetric compositioning</figcaption>
-</figure>
-</p>
-
-**Image Sources:**
-
-1. Image: [Efficient Ray Tracing of Volume Data - MARC LEVOY](https://www.cs.ucdavis.edu/~ma/ECS177/papers/levoy_raytrace_vol.pdf)
-2. Image: [Efficient Ray Tracing of Volume Data - MARC LEVOY](https://www.cs.ucdavis.edu/~ma/ECS177/papers/levoy_raytrace_vol.pdf)
-3. Image: [Volume Rendering - Crawfis, Ohio State Univ.](http://web.cse.ohio-state.edu/~parent.1/classes/681/Lectures/VolumeRendering.pdf)
-4. Image: [Volume Rendering - Crawfis, Ohio State Univ.](http://web.cse.ohio-state.edu/~parent.1/classes/681/Lectures/VolumeRendering.pdf)
-
+TODO
 
 ## Performance Statistics
 
@@ -174,10 +139,9 @@ TODO
 ## TODOs
 
 - [ ] find an efficient *empty ray skipping* optimization technique implementation
-- [ ] add more sampling interpolators (cubic, Hermite, etc.)
 - [ ] add 2D gradient-based transfer function
 - [ ] add doxygen for documentation generation
-- [ ] optimize the terrible Shader implementations
+- [ ] optimize DVR Shader implementations
 - [ ] add zoom-in/zoom-out functionalities for the TF UI
 
 ## License

@@ -85,7 +85,7 @@ namespace UnityCTVisualizer
         {
             m_ControlPoint.Position = Mathf.Clamp01(newX);
             m_ControlPoint.Value = Mathf.Clamp01(newY);
-            Vector2 newAnchor = new Vector2(m_ControlPoint.Position, m_ControlPoint.Value);
+            Vector2 newAnchor = new(m_ControlPoint.Position, m_ControlPoint.Value);
             m_ControlPointTransform.anchorMin = newAnchor;
             m_ControlPointTransform.anchorMax = newAnchor;
             // don't forget to reset rect position after updating anchors
@@ -104,8 +104,8 @@ namespace UnityCTVisualizer
         public void OnDrag(PointerEventData eventData)
         {
             SetPosition(
-                m_ControlPoint.Position + (eventData.delta.x / (float)Screen.width),
-                m_ControlPoint.Value + (eventData.delta.y / (float)Screen.height)
+                m_ControlPoint.Position + (eventData.delta.x / Screen.width),
+                m_ControlPoint.Value + (eventData.delta.y / Screen.height)
             );
         }
 
