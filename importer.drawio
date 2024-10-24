@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="eZ7E7CzJr8EXRD6tGukm" name="Page-1">
-        <mxGraphModel dx="2263" dy="1263" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" background="#ffffff" math="0" shadow="0">
+        <mxGraphModel dx="1387" dy="269" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" background="#ffffff" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -8,7 +8,7 @@
                     <mxGeometry x="-160" y="455" width="330" height="130" as="geometry"/>
                 </mxCell>
                 <mxCell id="47" value="Supported CT Dataset Formats" style="swimlane;fontSize=24;startSize=60;" parent="1" vertex="1">
-                    <mxGeometry x="-770" y="268" width="470" height="562" as="geometry"/>
+                    <mxGeometry x="-770" y="160" width="470" height="762" as="geometry"/>
                 </mxCell>
                 <mxCell id="46" value="" style="group" parent="47" vertex="1" connectable="0">
                     <mxGeometry x="10" y="70" width="450" height="280" as="geometry"/>
@@ -16,22 +16,34 @@
                 <mxCell id="38" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="46" vertex="1">
                     <mxGeometry width="450.0000000000001" height="280" as="geometry"/>
                 </mxCell>
-                <mxCell id="39" value="&lt;h1&gt;DICOM&lt;/h1&gt;&lt;p&gt;a very widely used international standard format&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://dicom.innolitics.com/ciods&quot;&gt;https://dicom.innolitics.com/ciods&lt;/a&gt;&lt;br&gt;&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;" parent="46" vertex="1">
-                    <mxGeometry x="10.714285714285715" y="9.655172413793103" width="417.8571428571429" height="96.55172413793103" as="geometry"/>
+                <mxCell id="39" value="&lt;h1&gt;DICOM&lt;/h1&gt;&lt;p&gt;a very widely used international standard format for storing medical imaging data&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://dicom.innolitics.com/ciods&quot;&gt;https://dicom.innolitics.com/ciods&lt;/a&gt;&lt;br&gt;&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;" parent="46" vertex="1">
+                    <mxGeometry x="10.71" y="9.66" width="417.86" height="110.34" as="geometry"/>
                 </mxCell>
                 <mxCell id="14" value="&lt;ul&gt;&lt;li&gt;.dcm extension&lt;/li&gt;&lt;li&gt;header + data combined into one file:&lt;br&gt;&lt;/li&gt;&lt;ul&gt;&lt;li&gt;header: patient demographics, image dimension, acquisition parameters, pixel spacing, color space, etc.&lt;/li&gt;&lt;li&gt;image datasets: binary format for single frame or multiple frames&lt;/li&gt;&lt;/ul&gt;&lt;li&gt;a series can be extracted from one .dcm file or multiple .dcm files&lt;/li&gt;&lt;/ul&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=wrap;verticalAlign=middle;overflow=hidden;align=left;" parent="46" vertex="1">
                     <mxGeometry x="10.714285714285715" y="106.20689655172414" width="407.1428571428572" height="164.1379310344828" as="geometry"/>
                 </mxCell>
-                <mxCell id="66" value="" style="group" vertex="1" connectable="0" parent="47">
+                <mxCell id="66" value="" style="group" parent="47" vertex="1" connectable="0">
                     <mxGeometry x="10" y="360" width="450" height="190" as="geometry"/>
                 </mxCell>
-                <mxCell id="67" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="66">
+                <mxCell id="67" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="66" vertex="1">
                     <mxGeometry width="450.0000000000001" height="190" as="geometry"/>
                 </mxCell>
-                <mxCell id="68" value="&lt;h1&gt;RAW&lt;/h1&gt;&lt;p&gt;raw binary data&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="66">
+                <mxCell id="68" value="&lt;h1&gt;RAW&lt;/h1&gt;&lt;p&gt;raw binary data&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;" parent="66" vertex="1">
                     <mxGeometry x="10.714285714285715" y="6.551724137931036" width="417.8571428571429" height="65.51724137931035" as="geometry"/>
                 </mxCell>
-                <mxCell id="69" value="&lt;ul&gt;&lt;li&gt;.raw extension&lt;/li&gt;&lt;li&gt;does not contain volume attributes in them such as width, height or depth. These are prompted from the user.&lt;/li&gt;&lt;/ul&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=wrap;verticalAlign=middle;overflow=hidden;align=left;" vertex="1" parent="66">
+                <mxCell id="69" value="&lt;ul&gt;&lt;li&gt;.raw extension&lt;/li&gt;&lt;li&gt;does not contain volume attributes in them such as width, height or depth. These are prompted from the user.&lt;/li&gt;&lt;/ul&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=wrap;verticalAlign=middle;overflow=hidden;align=left;" parent="66" vertex="1">
+                    <mxGeometry x="10.71" y="85" width="407.14" height="73.45000000000002" as="geometry"/>
+                </mxCell>
+                <mxCell id="72" value="" style="group" parent="47" vertex="1" connectable="0">
+                    <mxGeometry x="10" y="562" width="450" height="190" as="geometry"/>
+                </mxCell>
+                <mxCell id="73" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="72" vertex="1">
+                    <mxGeometry width="450.0000000000001" height="190" as="geometry"/>
+                </mxCell>
+                <mxCell id="74" value="&lt;h1&gt;Image Sequence&lt;/h1&gt;&lt;p&gt;a sequence of images with an optional metadata file&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;" parent="72" vertex="1">
+                    <mxGeometry x="10.714285714285715" y="6.551724137931036" width="417.8571428571429" height="65.51724137931035" as="geometry"/>
+                </mxCell>
+                <mxCell id="75" value="&lt;ul&gt;&lt;li&gt;.tiff | .png | .bmp extensions&lt;/li&gt;&lt;li&gt;do not contain volume attributes in them such as width, height or depth. These are prompted from the user.&lt;/li&gt;&lt;/ul&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=wrap;verticalAlign=middle;overflow=hidden;align=left;" parent="72" vertex="1">
                     <mxGeometry x="10.71" y="85" width="407.14" height="73.45000000000002" as="geometry"/>
                 </mxCell>
                 <mxCell id="50" value="" style="endArrow=classic;html=1;fontSize=24;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" target="45" edge="1">
@@ -52,17 +64,20 @@
                 <mxCell id="55" value="Output" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;fontSize=24;" parent="54" connectable="0" vertex="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="65" value="" style="group" parent="1" vertex="1" connectable="0">
-                    <mxGeometry x="330" y="330" width="440" height="380" as="geometry"/>
+                <mxCell id="65" value="" style="group;spacing=0;verticalAlign=top;" parent="1" vertex="1" connectable="0">
+                    <mxGeometry x="320" y="210" width="500" height="770" as="geometry"/>
                 </mxCell>
                 <mxCell id="61" value="" style="rounded=0;whiteSpace=wrap;html=1;fontSize=24;" parent="65" vertex="1">
-                    <mxGeometry width="440" height="379.9999999999999" as="geometry"/>
+                    <mxGeometry width="500" height="770" as="geometry"/>
                 </mxCell>
-                <mxCell id="63" value="&lt;h1&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;UnityVolumetricDataSet (UVDS)&lt;/span&gt;&lt;/h1&gt;&lt;h1&gt;&lt;span style=&quot;font-size: 12px; font-weight: 400;&quot;&gt;a binary volumetric dataset representation that the Unity client expects&lt;/span&gt;&lt;/h1&gt;&lt;div&gt;&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;font-size: 12px; font-weight: 400;&quot;&gt;.uvds format&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;font-size: 12px; font-weight: 400;&quot;&gt;only used within this project for convenience reasons&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fontSize=12;" parent="65" vertex="1">
-                    <mxGeometry x="10" y="11.178333333333335" width="420" height="168.26611111111114" as="geometry"/>
+                <mxCell id="63" value="&lt;h1&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;UnityVolumetricDataSet (UVDS)&lt;/span&gt;&lt;/h1&gt;&lt;h1&gt;&lt;span style=&quot;font-size: 12px; font-weight: 400;&quot;&gt;a very simple chunked and LZ4-compressed binary volumetric dataset representation that the Unity client expects.&lt;/span&gt;&lt;/h1&gt;&lt;div&gt;&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;font-size: 12px; font-weight: 400;&quot;&gt;metadata.txt format for metadata&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;font-size: 12px; font-weight: 400;&quot;&gt;for each resolution level:&lt;/span&gt;&lt;/li&gt;&lt;ul&gt;&lt;li&gt;chunck_res&amp;lt;resolution-level&amp;gt;_&amp;lt;id&amp;gt;.uvds(.lz4) format for binary chunks&lt;/li&gt;&lt;/ul&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li&gt;edge bricks are padded with 0 densities&lt;/li&gt;&lt;li&gt;each .uvds(.lz4) file represents a brick volume chunck&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fontSize=12;" parent="65" vertex="1">
+                    <mxGeometry x="11.36" y="11.040806451612903" width="477.27" height="274.6043548387097" as="geometry"/>
                 </mxCell>
-                <mxCell id="64" value="&lt;div style=&quot;box-sizing: border-box; width: 100%; background: rgb(228, 228, 228); padding: 2px;&quot;&gt;specification&lt;/div&gt;&lt;table style=&quot;width:100%;font-size:1em;&quot; cellpadding=&quot;2&quot; cellspacing=&quot;0&quot;&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;br&gt;&lt;/td&gt;&lt;td&gt;imagewidth: uint16&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;br&gt;&lt;/td&gt;&lt;td&gt;imageheight: uint16&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;/td&gt;&lt;td&gt;nbrslices: uint16&lt;br&gt;voxeldimX: float32&lt;br&gt;voxeldimY: float32&lt;br&gt;voxeldimZ: float32&lt;br&gt;eulerrotX: float32&lt;br&gt;eulerrotY: float32&lt;br&gt;eulerrotZ: float32&lt;br&gt;minDensity: float16&lt;br&gt;maxDensity: float16&lt;br&gt;densities: array&amp;lt;float16&amp;gt;&lt;br&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;fontSize=12;" parent="65" vertex="1">
-                    <mxGeometry x="10" y="160" width="420" height="205.24" as="geometry"/>
+                <mxCell id="64" value="&lt;div style=&quot;box-sizing: border-box; width: 100%; background: rgb(228, 228, 228); padding: 2px;&quot;&gt;metadata&lt;/div&gt;&lt;table style=&quot;width:100%;font-size:1em;&quot; cellpadding=&quot;2&quot; cellspacing=&quot;0&quot;&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;/td&gt;&lt;td style=&quot;&quot;&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;&quot;&gt;&lt;/td&gt;&lt;td&gt;&lt;div style=&quot;&quot;&gt;originalimagewidth: uint&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;originalimageheight: uint&lt;span style=&quot;background-color: initial; font-size: 1em;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial; font-size: 1em;&quot;&gt;originalnbrslices: uint&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial; font-size: 1em;&quot;&gt;bricksize: -1 | 32 | 64 | 128 | 256 |512 | 1024&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&lt;font style=&quot;&quot;&gt;nbrbricksX: uint&lt;br&gt;&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&lt;font style=&quot;&quot;&gt;nbrbricksY: uint&lt;br&gt;&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&lt;font style=&quot;&quot;&gt;nbrbricksZ: uint&lt;br&gt;&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 1em; background-color: initial;&quot;&gt;&lt;font&gt;totalnbrbricks: uint&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 1em; background-color: initial;&quot;&gt;&lt;font&gt;resolutionlevels: uint (resolution levels up-to and including this)&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 1em; background-color: initial;&quot;&gt;&lt;font&gt;colordepth: uint8 | uint16 | float16&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;lz4compressed: 0 | 1&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 1em; background-color: initial;&quot;&gt;&lt;font&gt;voxeldimX: float&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial; font-size: 1em;&quot;&gt;voxeldimY: float&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 1em; background-color: initial;&quot;&gt;&lt;font&gt;voxeldimZ: float&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 1em; background-color: initial;&quot;&gt;&lt;font&gt;eulerrotX: float&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 1em; background-color: initial;&quot;&gt;&lt;font&gt;eulerrotY: float&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 1em; background-color: initial;&quot;&gt;&lt;font&gt;eulerrotZ: float&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 1em; background-color: initial;&quot;&gt;&lt;font&gt;mindensity: uint8 | uint16 | float16 (minimun density across the whole volume)&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;font-size: 1em; background-color: initial;&quot;&gt;&lt;font&gt;maxdensity: uint (maximum density across the whole volume)&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;fontSize=12;fontFamily=Tahoma;spacing=0;" parent="65" vertex="1">
+                    <mxGeometry x="11.36" y="260" width="477.27" height="360" as="geometry"/>
+                </mxCell>
+                <mxCell id="76" value="&lt;div style=&quot;box-sizing: border-box; width: 100%; background: rgb(228, 228, 228); padding: 2px;&quot;&gt;LZ4-compressed chunks&lt;/div&gt;&lt;table style=&quot;width:100%;font-size:1em;&quot; cellpadding=&quot;2&quot; cellspacing=&quot;0&quot;&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;flattened array of the volume brick:&lt;br&gt;&lt;br&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#9;&lt;/span&gt;- type: uint8 | uint16 | float16&lt;br&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#9;&lt;/span&gt;- size: bricksize&lt;sup&gt;3&lt;br&gt;&lt;/sup&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#9;&lt;/span&gt;- first bricksize&lt;sup&gt;2&lt;/sup&gt;&amp;nbsp;correspond to the first image slice of the brick volume&lt;br&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#9;&lt;/span&gt;- image slices flattened according to what Unity's Texture2D expects&lt;br&gt;&lt;/td&gt;&lt;td style=&quot;&quot;&gt;&lt;font&gt;&amp;nbsp;&lt;/font&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;fontSize=12;fontFamily=Tahoma;spacing=0;" parent="65" vertex="1">
+                    <mxGeometry x="11.36" y="624.9275362318841" width="477.27" height="135.1963768115942" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>

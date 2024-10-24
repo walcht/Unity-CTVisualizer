@@ -56,5 +56,9 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "Unity-Immersive-Analytics.sln"
+    "dotnet.defaultSolution": "Unity-CTVisualizer.sln",
+    "python.analysis.typeCheckingMode": "basic",
+    "editor.tabSize": 2,
+    "editor.renderWhitespace": "trailing",
+    "editor.rulers": [80,120]
 }

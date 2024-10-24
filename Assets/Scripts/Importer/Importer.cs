@@ -1,200 +1,228 @@
+using System;
 using System.IO;
-using System.IO.Compression;
-using System.Linq;
+using K4os.Compression.LZ4;
 using UnityEngine;
 
-namespace UnityCTVisualizer
-{
-    public interface IUVDS
-    {
-        public string DatasetPath { get; set; }
-        public ushort ImageWidth { get; set; }
-        public ushort ImageHeight { get; set; }
-        public ushort NbrSlices { get; set; }
+namespace UnityCTVisualizer {
+    public enum ColorDepth {
+        UINT8, UINT16
+    }
+
+    public class UVDSMetadata {
+        public int OriginalImageWidth { get; set; }
+        public int OriginalImageHeight { get; set; }
+        public int OriginalNbrSlices { get; set; }
+        public int ImageWidth { get; set; }
+        public int ImageHeight { get; set; }
+        public int NbrSlices { get; set; }
+        public int BrickSize { get; set; }
+        public int BrickSizeBytes { get; set; }
+        public int NbrBricksX { get; set; }
+        public int NbrBricksY { get; set; }
+        public int NbrBricksZ { get; set; }
+        public int TotalNbrBricks { get; set; }
+        public int ResolutionLevels { get; set; }
+        public ColorDepth ColourDepth { get; set; }
+        public bool Lz4Compressed { get; set; }
         public Vector3 Scale { get; set; }
         public Vector3 EulerRotation { get; set; }
-        public float MinDensity { get; set; }
-        public float MaxDensity { get; set; }
-        public float[] Densities { get; set; }
+        public float DensityMin { get; set; }
+        public float DensityMax { get; set; }
     }
 
-    public interface IProgressHandler
-    {
-        float Progress { set; }
-        string Message { set; }
-    }
+    public static class Importer {
+        public static float SCALE_DEFAULT = -1.0f;
 
-    public static class Importer
-    {
-        // from https://docs.unity3d.com/Manual/class-Texture3D.html
-        const ushort MAX_TEXTURE3D_DIM = 2048;
+        public static void ImportMetadata(string dataset_path, ref UVDSMetadata metadata) {
+            string metadata_fp;
+            string[] volume_chunks_fps;
 
-        const ushort DIMENSION_DEFAULT = 65535;
-        const float SCALE_DEFAULT = -1f;
+            try {
+                metadata_fp = Directory.GetFiles(dataset_path, "metadata.txt")[0];
+                volume_chunks_fps = Directory.GetFiles(dataset_path, "*.uvds");
+                Array.Sort(volume_chunks_fps);
+            } catch {
+                throw new FileLoadException("Failed to extract UVDS dataset from provided directory");
+            }
+            using (StreamReader sr = new(metadata_fp)) {
+                string line;
+                Vector3 scale = new(1, 1, 1);
+                Vector3 eulerRotation = new(1, 1, 1);
+                while ((line = sr.ReadLine()) != null) {
+                    string[] split = line.Split("=");
+                    switch (split[0]) {
+                        case "originalimagewidth":
+                        metadata.OriginalImageWidth = int.Parse(split[1]);
+                        break;
+                        case "originalimageheight":
+                        metadata.OriginalImageHeight = int.Parse(split[1]);
+                        break;
+                        case "originalnbrslices":
+                        metadata.OriginalNbrSlices = int.Parse(split[1]);
+                        break;
+                        case "imagewidth":
+                        metadata.ImageWidth = int.Parse(split[1]);
+                        break;
+                        case "imageheight":
+                        metadata.ImageHeight = int.Parse(split[1]);
+                        break;
+                        case "nbrslices":
+                        metadata.NbrSlices = int.Parse(split[1]);
+                        break;
+                        case "bricksize":
+                        metadata.BrickSize = int.Parse(split[1]);
+                        break;
+                        case "bricksizebytes":
+                        metadata.BrickSizeBytes = int.Parse(split[1]);
+                        break;
+                        case "nbrbricksX":
+                        metadata.NbrBricksX = int.Parse(split[1]);
+                        break;
+                        case "nbrbricksY":
+                        metadata.NbrBricksY = int.Parse(split[1]);
+                        break;
+                        case "nbrbricksZ":
+                        metadata.NbrBricksZ = int.Parse(split[1]);
+                        break;
+                        case "totalnbrbricks":
+                        metadata.TotalNbrBricks = int.Parse(split[1]);
+                        break;
+                        case "resolutionlevels":
+                        metadata.ResolutionLevels = int.Parse(split[1]);
+                        break;
+                        case "colordepth":
+                        switch (split[1]) {
+                            case "8":
+                            metadata.ColourDepth = ColorDepth.UINT8;
+                            break;
+                            case "16":
+                            metadata.ColourDepth = ColorDepth.UINT16;
+                            break;
+                            default:
+                            break;
+                        }
 
-        private static void ImportUVDSInternal(
-            BinaryReader reader,
-            string datasetPath,
-            IUVDS volumetricDataset,
-            IProgressHandler progressHandler = null
-        )
-        {
-            ushort imageWidth = reader.ReadUInt16();
-            ushort imageHeight = reader.ReadUInt16();
-            ushort nbrSlices = reader.ReadUInt16();
-            float voxelWidth = reader.ReadSingle();
-            float voxelHeight = reader.ReadSingle();
-            float voxelDepth = reader.ReadSingle();
-            float eulerRotX = reader.ReadSingle();
-            float eulerRotY = reader.ReadSingle();
-            float eulerRotZ = reader.ReadSingle();
-            float minDensity = Mathf.HalfToFloat(reader.ReadUInt16());
-            float maxDensity = Mathf.HalfToFloat(reader.ReadUInt16());
-            if (
-                imageWidth == DIMENSION_DEFAULT
-                || imageHeight == DIMENSION_DEFAULT
-                || nbrSlices == DIMENSION_DEFAULT
-            )
-            {
-                Debug.LogError(
-                    $"Provided dataset has invalid default value(s) for its dimensions. Aborting ..."
-                );
-                return;
-            }
-            int dimension = imageWidth * imageHeight * nbrSlices;
-            if (Mathf.Max(imageWidth, imageHeight, nbrSlices) > MAX_TEXTURE3D_DIM)
-            {
-                Debug.LogError(
-                    $"Exceeding maximum Texture3D dimension: {MAX_TEXTURE3D_DIM}. Aborting ..."
-                );
-                return;
-            }
-            Vector3 scale = new(1, 1, 1);
-            if (
-                voxelWidth == SCALE_DEFAULT
-                || voxelHeight == SCALE_DEFAULT
-                || voxelDepth == SCALE_DEFAULT
-            )
-            {
-                Debug.LogWarning(
-                    "Voxel dimension has invalid default value(s)."
-                        + "Default scale (1, 1, 1) is used for the volume. The dimensions of the "
-                        + "volume no longer reflect its dimensions in reality!"
-                );
-            }
-            else
-            {
-                scale.x = (voxelWidth / 1000.0f) * imageWidth; // mm to meters
-                scale.y = (voxelHeight / 1000.0f) * imageHeight;
-                scale.z = (voxelDepth / 1000.0f) * nbrSlices;
-            }
-            int sliceIdx = 0;
-            int pixelIdx = 0;
-            float[] densities = new float[dimension];
-            int sliceDim = imageWidth * imageHeight;
-            for (; reader.BaseStream.Position != reader.BaseStream.Length; ++sliceIdx)
-            {
-                if (progressHandler != null)
-                {
-                    progressHandler.Progress = sliceIdx / (float)nbrSlices;
-                    progressHandler.Message = $"Importing slice number: {sliceIdx + 1}";
+                        break;
+                        case "lz4compressed":
+                        metadata.Lz4Compressed = int.Parse(split[1]) == 1;
+                        break;
+                        case "voxeldimX":
+                        float voxelDimX = float.Parse(split[1]);
+                        if (voxelDimX == SCALE_DEFAULT) {
+                            scale.x = 1.0f;
+                            Debug.LogWarning(
+                                "Voxel dimension X has invalid default value."
+                                    + "Default scale 1 is used for the volume along the X axis. The dimensions of the "
+                                    + "volume no longer reflect its dimensions in reality!"
+                            );
+                            break;
+                        }
+                        scale.x = (voxelDimX / 1000.0f) * metadata.ImageWidth;
+                        break;
+                        case "voxeldimY":
+                        float voxelDimY = float.Parse(split[1]);
+                        if (voxelDimY == SCALE_DEFAULT) {
+
+                            scale.y = 1.0f;
+                            Debug.LogWarning(
+                                "Voxel dimension Y has invalid default value."
+                                    + "Default scale 1 is used for the volume along the Y axis. The dimensions of the "
+                                    + "volume no longer reflect its dimensions in reality!"
+                            );
+                            break;
+                        }
+                        scale.y = (voxelDimY / 1000.0f) * metadata.ImageHeight;
+                        break;
+                        case "voxeldimZ":
+                        float voxelDimZ = float.Parse(split[1]);
+                        if (voxelDimZ == SCALE_DEFAULT) {
+                            scale.z = 1.0f;
+                            Debug.LogWarning(
+                                "Voxel dimension Z has invalid default value."
+                                    + "Default scale 1 is used for the volume along the Z axis. The dimensions of the "
+                                    + "volume no longer reflect its dimensions in reality!"
+                            );
+                            break;
+                        }
+                        scale.z = (voxelDimZ / 1000.0f) * metadata.NbrSlices;
+                        break;
+                        case "eulerrotX":
+                        eulerRotation.x = float.Parse(split[1]);
+                        break;
+                        case "eulerrotY":
+                        eulerRotation.y = float.Parse(split[1]);
+                        break;
+                        case "eulerrotZ":
+                        eulerRotation.z = float.Parse(split[1]);
+                        break;
+                        case "densitymin":
+                        metadata.DensityMin = float.Parse(split[1]);
+                        break;
+                        case "densitymax":
+                        metadata.DensityMax = float.Parse(split[1]);
+                        break;
+                        default:
+                        break;
+                    }
                 }
-                // this loop is here only for the progress handler
-                for (pixelIdx = 0; pixelIdx < sliceDim; pixelIdx++)
-                {
-                    densities[sliceIdx * sliceDim + pixelIdx] = Mathf.HalfToFloat(
-                        reader.ReadUInt16()
-                    );
-                }
+                metadata.Scale = scale;
+                metadata.EulerRotation = eulerRotation;
             }
-            if (((sliceIdx - 1) * sliceDim + pixelIdx) != dimension)
-            {
-                Debug.LogError(
-                    "Less elements in provided UVDS dataset than expected."
-                        + $" Read = {sliceIdx * sliceDim + pixelIdx}\t Expected: {dimension}."
-                );
-                return;
-            }
-            if (minDensity > maxDensity)
-            {
-                Debug.LogWarning(
-                    "Densities maximum and input values have invalid defaults. Recalculating ..."
-                );
-                minDensity = densities.Min();
-                maxDensity = densities.Max();
-            }
-            volumetricDataset.DatasetPath = datasetPath;
-            volumetricDataset.ImageWidth = imageWidth;
-            volumetricDataset.ImageHeight = imageHeight;
-            volumetricDataset.NbrSlices = nbrSlices;
-            volumetricDataset.Scale = scale;
-            volumetricDataset.EulerRotation = new Vector3(eulerRotX, eulerRotY, eulerRotZ);
-            volumetricDataset.MinDensity = minDensity;
-            volumetricDataset.MaxDensity = maxDensity;
-            volumetricDataset.Densities = densities;
         }
 
         /// <summary>
-        /// Imports a volumetric dataset from a Unity Volumetric DataSet (UVDS) binary file
+        ///     Imports a single volume chunk (i.e., a subset of the 3D volume) from the UVDS path.
         /// </summary>
-        /// <remark>
-        /// To execute this asynchronously, wrap it in a Task.Run call and await the result.
-        /// </remark>
-        /// <param name="datasetPath">absolute path to a UVDS binary file</param>
-        /// <param name="volumetricDataset">an initialized volumetric dataset whose public IUVDS properties
-        /// are going to be set by this importer</param>
-        /// <param name="progressHandler">a progress handler whose progress percentage and progress message
-        /// are going to be updated by this importer. Only pass this parameter when this importer is executed
-        /// asynchronously</param>
-        public static void ImportUVDS(
-            string datasetPath,
-            IUVDS volumetricDataset,
-            IProgressHandler progressHandler = null
-        )
-        {
-            if (progressHandler != null)
-            {
-                progressHandler.Progress = 0.0f;
-                progressHandler.Message = "Importing UVDS dataset ...";
+        /// 
+        /// <remarks>
+        ///     Import will fail if chunk size in bytes exceeds the maximum size for an object allowed
+        ///     by .NET (i.e., 2GBs). No size checks are performed in this function.
+        /// </remarks>
+        /// 
+        /// <param name="dataset_path">UVDS root directory path</param>
+        /// 
+        /// <param name="metadata">UVDS metadata</param>
+        /// 
+        /// <param name="chunk_id">the id of the chunk to be imported. The file <paramref name="chunk_id"/>.uvds should exist
+        /// in the provided resolution level subdirectory of the UVDS path</param>
+        /// 
+        /// <param name="resolution_lvl">resolution level of the requested chunk. The folder <paramref name="resolution_lvl"/>
+        /// should exist as a direct subdirectory of the UVDS path</param>
+        /// 
+        /// <returns>byte array of the requested chunk. TODO: describe the expected layout</returns>
+        /// 
+        public static bool ImportChunk(string dataset_path, out byte[] data, UVDSMetadata metadata, int chunk_id, int resolution_lvl) {
+            var chunk_fp = Path.Combine(dataset_path, $"chunk_{chunk_id}.uvds");
+            if (!File.Exists(chunk_fp)) {
+                data = null;
+                return false;
             }
-            // TODO: Add proper exception handling
-            using (var stream = File.Open(datasetPath, FileMode.Open))
-            {
-                if (datasetPath.EndsWith(".zip"))
-                {
-                    using (
-                        var reader = new ZipArchive(stream, ZipArchiveMode.Read).Entries[0].Open()
-                    )
-                    {
-                        using (var ms = new MemoryStream())
-                        {
-                            reader.CopyTo(ms);
-                            ms.Seek(0, SeekOrigin.Begin);
-                            using (var binaryReader = new BinaryReader(ms))
-                            {
-                                ImportUVDSInternal(
-                                    binaryReader,
-                                    datasetPath,
-                                    volumetricDataset,
-                                    progressHandler
-                                );
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    using (var binaryReader = new BinaryReader(stream))
-                    {
-                        ImportUVDSInternal(
-                            binaryReader,
-                            datasetPath,
-                            volumetricDataset,
-                            progressHandler
-                        );
-                    }
-                }
-            }
+            data = File.ReadAllBytes(chunk_fp);
+            return true;
         }
+
+        public static bool ImportChunk(string dataset_path, ref UInt16[] data, UVDSMetadata metadata, int chunk_id, int resolution_lvl) {
+            string chunk_fp = Path.Combine(dataset_path, $"chunk_{chunk_id}.uvds");
+            if (!File.Exists(chunk_fp)) {
+                return false;
+            }
+            using (FileStream fs = File.OpenRead(chunk_fp)) {
+                int i = 0;
+                while (fs.Position < fs.Length) {
+                    UInt16 val = (UInt16)((fs.ReadByte() << 8) | fs.ReadByte());
+                    data[i] = val;
+                    ++i;
+                }
+            }
+            return true;
+            /*
+            if (metadata.Lz4Compressed) {
+                byte[] decompressed_data = new byte[metadata.BrickSizeBytes];
+                LZ4Codec.Decode(source: data, target: decompressed_data);
+                return decompressed_data;
+            }
+            */
+        }
+
     }
 }

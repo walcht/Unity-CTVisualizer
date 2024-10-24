@@ -30,15 +30,6 @@ namespace UnityCTVisualizer
             ""id"": ""9dc6422a-bbbd-42e0-8b26-5da2e6320554"",
             ""actions"": [
                 {
-                    ""name"": ""Rotation"",
-                    ""type"": ""PassThrough"",
-                    ""id"": ""a154b685-ba14-481d-b9a1-244df53a341a"",
-                    ""expectedControlType"": ""Delta"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": true
-                },
-                {
                     ""name"": ""Scale"",
                     ""type"": ""PassThrough"",
                     ""id"": ""29c8d2a4-9dd5-43cc-b822-cf9e59638612"",
@@ -79,50 +70,6 @@ namespace UnityCTVisualizer
                     ""action"": ""SlowScaleActivator"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": ""Two Modifiers"",
-                    ""id"": ""b71c49d5-ef84-40cc-b818-5598c775f649"",
-                    ""path"": ""TwoModifiers"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Rotation"",
-                    ""isComposite"": true,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": ""modifier1"",
-                    ""id"": ""1f82fc08-6a78-4d7d-89bb-be6ee7100eab"",
-                    ""path"": ""<Keyboard>/leftCtrl"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Rotation"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": true
-                },
-                {
-                    ""name"": ""modifier2"",
-                    ""id"": ""8fc512db-d47e-42e8-b76a-5a5cb2b85016"",
-                    ""path"": ""<Mouse>/leftButton"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Rotation"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": true
-                },
-                {
-                    ""name"": ""binding"",
-                    ""id"": ""ac3caa37-5267-4c7e-8f24-2d003b01c031"",
-                    ""path"": ""<Pointer>/delta"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Rotation"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": true
                 }
             ]
         }
@@ -131,7 +78,6 @@ namespace UnityCTVisualizer
 }");
             // VolumetricObjectControls
             m_VolumetricObjectControls = asset.FindActionMap("VolumetricObjectControls", throwIfNotFound: true);
-            m_VolumetricObjectControls_Rotation = m_VolumetricObjectControls.FindAction("Rotation", throwIfNotFound: true);
             m_VolumetricObjectControls_Scale = m_VolumetricObjectControls.FindAction("Scale", throwIfNotFound: true);
             m_VolumetricObjectControls_SlowScaleActivator = m_VolumetricObjectControls.FindAction("SlowScaleActivator", throwIfNotFound: true);
         }
@@ -195,14 +141,12 @@ namespace UnityCTVisualizer
         // VolumetricObjectControls
         private readonly InputActionMap m_VolumetricObjectControls;
         private List<IVolumetricObjectControlsActions> m_VolumetricObjectControlsActionsCallbackInterfaces = new List<IVolumetricObjectControlsActions>();
-        private readonly InputAction m_VolumetricObjectControls_Rotation;
         private readonly InputAction m_VolumetricObjectControls_Scale;
         private readonly InputAction m_VolumetricObjectControls_SlowScaleActivator;
         public struct VolumetricObjectControlsActions
         {
             private @UnityCTVisualizerInput m_Wrapper;
             public VolumetricObjectControlsActions(@UnityCTVisualizerInput wrapper) { m_Wrapper = wrapper; }
-            public InputAction @Rotation => m_Wrapper.m_VolumetricObjectControls_Rotation;
             public InputAction @Scale => m_Wrapper.m_VolumetricObjectControls_Scale;
             public InputAction @SlowScaleActivator => m_Wrapper.m_VolumetricObjectControls_SlowScaleActivator;
             public InputActionMap Get() { return m_Wrapper.m_VolumetricObjectControls; }
@@ -214,9 +158,6 @@ namespace UnityCTVisualizer
             {
                 if (instance == null || m_Wrapper.m_VolumetricObjectControlsActionsCallbackInterfaces.Contains(instance)) return;
                 m_Wrapper.m_VolumetricObjectControlsActionsCallbackInterfaces.Add(instance);
-                @Rotation.started += instance.OnRotation;
-                @Rotation.performed += instance.OnRotation;
-                @Rotation.canceled += instance.OnRotation;
                 @Scale.started += instance.OnScale;
                 @Scale.performed += instance.OnScale;
                 @Scale.canceled += instance.OnScale;
@@ -227,9 +168,6 @@ namespace UnityCTVisualizer
 
             private void UnregisterCallbacks(IVolumetricObjectControlsActions instance)
             {
-                @Rotation.started -= instance.OnRotation;
-                @Rotation.performed -= instance.OnRotation;
-                @Rotation.canceled -= instance.OnRotation;
                 @Scale.started -= instance.OnScale;
                 @Scale.performed -= instance.OnScale;
                 @Scale.canceled -= instance.OnScale;
@@ -255,7 +193,6 @@ namespace UnityCTVisualizer
         public VolumetricObjectControlsActions @VolumetricObjectControls => new VolumetricObjectControlsActions(this);
         public interface IVolumetricObjectControlsActions
         {
-            void OnRotation(InputAction.CallbackContext context);
             void OnScale(InputAction.CallbackContext context);
             void OnSlowScaleActivator(InputAction.CallbackContext context);
         }

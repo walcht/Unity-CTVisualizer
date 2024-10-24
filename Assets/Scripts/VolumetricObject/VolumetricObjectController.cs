@@ -14,8 +14,10 @@ namespace UnityCTVisualizer
         [Range(5.0f, 10.0f)]
         public float m_MaxScale;
 
-        [Range(0.0f, 2.0f)]
-        public float m_RotationSpeed;
+        public bool m_Rotate = false;
+
+        [Range(0.0f, 360.0f)]
+        public float m_RotationSpeed = 40.0f;
 
         Transform m_Transform;
         UnityCTVisualizerInput m_InputLayer;
@@ -41,7 +43,6 @@ namespace UnityCTVisualizer
             m_OriginalScale = m_Transform.localScale;
             m_MaxScaleVect = m_OriginalScale * m_MaxScale;
 
-            m_InputLayer.VolumetricObjectControls.Rotation.performed += OnRotate;
         }
 
         float t = 0.0f;
@@ -54,7 +55,7 @@ namespace UnityCTVisualizer
                 t = Mathf.Clamp01(t + m_ScaleSpeed * m_ScaleSpeedModifier);
                 m_Transform.localScale = Vector3.Lerp(m_OriginalScale, m_MaxScaleVect, t);
             }
-            // yes. This has to be done because on linux we get 120, 0, -120
+            // this has to be done because on linux we get 120, 0, -120
             else if (scroll < 0)
             {
                 t = Mathf.Clamp01(t - m_ScaleSpeed * m_ScaleSpeedModifier);
@@ -62,10 +63,10 @@ namespace UnityCTVisualizer
             }
         }
 
-        void OnRotate(InputAction.CallbackContext context)
-        {
-            Vector2 delta = context.ReadValue<Vector2>();
-            m_Transform.Rotate(-delta.y * m_RotationSpeed, delta.x * m_RotationSpeed, 0.0f);
+        private void Update() {
+            if (m_Rotate) { 
+            m_Transform.Rotate(0.0f, Time.deltaTime * m_RotationSpeed, 0.0f);
+            }
         }
 
         void OnEnable()

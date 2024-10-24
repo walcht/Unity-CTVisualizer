@@ -6,15 +6,6 @@
             "id": "9dc6422a-bbbd-42e0-8b26-5da2e6320554",
             "actions": [
                 {
-                    "name": "Rotation",
-                    "type": "PassThrough",
-                    "id": "a154b685-ba14-481d-b9a1-244df53a341a",
-                    "expectedControlType": "Delta",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": true
-                },
-                {
                     "name": "Scale",
                     "type": "PassThrough",
                     "id": "29c8d2a4-9dd5-43cc-b822-cf9e59638612",
@@ -55,50 +46,6 @@
                     "action": "SlowScaleActivator",
                     "isComposite": false,
                     "isPartOfComposite": false
-                },
-                {
-                    "name": "Two Modifiers",
-                    "id": "b71c49d5-ef84-40cc-b818-5598c775f649",
-                    "path": "TwoModifiers",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Rotation",
-                    "isComposite": true,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "modifier1",
-                    "id": "1f82fc08-6a78-4d7d-89bb-be6ee7100eab",
-                    "path": "<Keyboard>/leftCtrl",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Rotation",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
-                {
-                    "name": "modifier2",
-                    "id": "8fc512db-d47e-42e8-b76a-5a5cb2b85016",
-                    "path": "<Mouse>/leftButton",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Rotation",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
-                {
-                    "name": "binding",
-                    "id": "ac3caa37-5267-4c7e-8f24-2d003b01c031",
-                    "path": "<Pointer>/delta",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Rotation",
-                    "isComposite": false,
-                    "isPartOfComposite": true
                 }
             ]
         }
