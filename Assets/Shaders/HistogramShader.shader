@@ -16,8 +16,6 @@ Shader "UnityCTVisualizer/HistogramShader"
         Pass
         {
             CGPROGRAM
-// Upgrade NOTE: excluded shader from DX11 because it uses wrong array syntax (type[size] name)
-#pragma exclude_renderers d3d11
             #pragma vertex vert
             #pragma fragment frag
             #include "UnityCG.cginc"
