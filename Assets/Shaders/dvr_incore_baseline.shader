@@ -102,15 +102,16 @@ Shader "UnityCTVisualizer/dvr_incore_baseline"
                 // get normalized ray direction in object space and in view space (i.e., camera space)
                 float3 ray_dir_viewspace;
                 float3 ray_origin_viewspace = UnityObjectToViewPos(modelVertex);
-                if (unity_OrthoParams.w > 0) {
-                    // orthogonal camera mode. Every ray has the same direction
-                    ray_dir_viewspace = float3(0.0f, 0.0f, 1.0f);
-                    float3 cameraWorldDir = mul((float3x3)unity_CameraToWorld, ray_dir_viewspace);
-                    ray.dir = normalize(mul(unity_WorldToObject, cameraWorldDir));
-                } else {
+                if (unity_OrthoParams.w == 0) {
                     // perspective camera. Ray direction depends on interpolated model vertex position for this fragment
                     ray_dir_viewspace = -normalize(ray_origin_viewspace);
                     ray.dir = normalize(ObjSpaceViewDir(float4(modelVertex, 0.0f)));
+                } else {
+                    // orthogonal camera mode. Every ray has the same direction
+                    ray_dir_viewspace = float3(0.0f, 0.0f, 1.0f);
+                    // unity_CameraToWorld's forward axis is NOT -Z
+                    float3 cameraWorldDir = mul((float3x3)unity_CameraToWorld, -ray_dir_viewspace);
+                    ray.dir = normalize(mul(unity_WorldToObject, cameraWorldDir));
                 }
 
                 // initialize the axis-aligned bounding box (AABB)
