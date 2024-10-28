@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using K4os.Compression.LZ4;
 using UnityEngine;
 
 namespace UnityCTVisualizer {
@@ -9,31 +8,27 @@ namespace UnityCTVisualizer {
     }
 
     public class UVDSMetadata {
+        public string DatasetPath { get; set; }
         public int OriginalImageWidth { get; set; }
         public int OriginalImageHeight { get; set; }
         public int OriginalNbrSlices { get; set; }
-        public int ImageWidth { get; set; }
-        public int ImageHeight { get; set; }
-        public int NbrSlices { get; set; }
-        public int BrickSize { get; set; }
-        public int BrickSizeBytes { get; set; }
-        public int NbrBricksX { get; set; }
-        public int NbrBricksY { get; set; }
-        public int NbrBricksZ { get; set; }
-        public int TotalNbrBricks { get; set; }
-        public int ResolutionLevels { get; set; }
         public ColorDepth ColourDepth { get; set; }
-        public bool Lz4Compressed { get; set; }
         public Vector3 Scale { get; set; }
         public Vector3 EulerRotation { get; set; }
-        public float DensityMin { get; set; }
-        public float DensityMax { get; set; }
+    }
+
+    public interface IImporter {
+        string DatsetPath { get; }
+        UVDSMetadata ImportMetadata();
+        bool ImportChunk(UInt32 brick_id, int brickSize, Vector3Int dims, out byte[] chunk_data);
+        bool ImportChunk(UInt32 brick_id, int brickSize, Vector3Int dims, out UInt16[] chunk_data);
+        bool IsMetadataImportable { get; }
     }
 
     public static class Importer {
         public static float SCALE_DEFAULT = -1.0f;
 
-        public static void ImportMetadata(string dataset_path, ref UVDSMetadata metadata) {
+        public static void ImportMetadata(string dataset_path, ref VolumetricDataset volumetricDataset) {
             string metadata_fp;
             string[] volume_chunks_fps;
 
@@ -60,36 +55,6 @@ namespace UnityCTVisualizer {
                         case "originalnbrslices":
                         metadata.OriginalNbrSlices = int.Parse(split[1]);
                         break;
-                        case "imagewidth":
-                        metadata.ImageWidth = int.Parse(split[1]);
-                        break;
-                        case "imageheight":
-                        metadata.ImageHeight = int.Parse(split[1]);
-                        break;
-                        case "nbrslices":
-                        metadata.NbrSlices = int.Parse(split[1]);
-                        break;
-                        case "bricksize":
-                        metadata.BrickSize = int.Parse(split[1]);
-                        break;
-                        case "bricksizebytes":
-                        metadata.BrickSizeBytes = int.Parse(split[1]);
-                        break;
-                        case "nbrbricksX":
-                        metadata.NbrBricksX = int.Parse(split[1]);
-                        break;
-                        case "nbrbricksY":
-                        metadata.NbrBricksY = int.Parse(split[1]);
-                        break;
-                        case "nbrbricksZ":
-                        metadata.NbrBricksZ = int.Parse(split[1]);
-                        break;
-                        case "totalnbrbricks":
-                        metadata.TotalNbrBricks = int.Parse(split[1]);
-                        break;
-                        case "resolutionlevels":
-                        metadata.ResolutionLevels = int.Parse(split[1]);
-                        break;
                         case "colordepth":
                         switch (split[1]) {
                             case "8":
@@ -103,22 +68,6 @@ namespace UnityCTVisualizer {
                         }
 
                         break;
-                        case "lz4compressed":
-                        metadata.Lz4Compressed = int.Parse(split[1]) == 1;
-                        break;
-                        case "voxeldimX":
-                        float voxelDimX = float.Parse(split[1]);
-                        if (voxelDimX == SCALE_DEFAULT) {
-                            scale.x = 1.0f;
-                            Debug.LogWarning(
-                                "Voxel dimension X has invalid default value."
-                                    + "Default scale 1 is used for the volume along the X axis. The dimensions of the "
-                                    + "volume no longer reflect its dimensions in reality!"
-                            );
-                            break;
-                        }
-                        scale.x = (voxelDimX / 1000.0f) * metadata.ImageWidth;
-                        break;
                         case "voxeldimY":
                         float voxelDimY = float.Parse(split[1]);
                         if (voxelDimY == SCALE_DEFAULT) {
@@ -131,7 +80,7 @@ namespace UnityCTVisualizer {
                             );
                             break;
                         }
-                        scale.y = (voxelDimY / 1000.0f) * metadata.ImageHeight;
+                        scale.y = (voxelDimY / 1000.0f) * metadata.OriginalImageHeight;
                         break;
                         case "voxeldimZ":
                         float voxelDimZ = float.Parse(split[1]);
@@ -144,7 +93,7 @@ namespace UnityCTVisualizer {
                             );
                             break;
                         }
-                        scale.z = (voxelDimZ / 1000.0f) * metadata.NbrSlices;
+                        scale.z = (voxelDimZ / 1000.0f) * metadata.OriginalNbrSlices;
                         break;
                         case "eulerrotX":
                         eulerRotation.x = float.Parse(split[1]);
@@ -154,12 +103,6 @@ namespace UnityCTVisualizer {
                         break;
                         case "eulerrotZ":
                         eulerRotation.z = float.Parse(split[1]);
-                        break;
-                        case "densitymin":
-                        metadata.DensityMin = float.Parse(split[1]);
-                        break;
-                        case "densitymax":
-                        metadata.DensityMax = float.Parse(split[1]);
                         break;
                         default:
                         break;
@@ -171,7 +114,7 @@ namespace UnityCTVisualizer {
         }
 
         /// <summary>
-        ///     Imports a single volume chunk (i.e., a subset of the 3D volume) from the UVDS path.
+        ///     Imports a single volume brick (i.e., a subset of the 3D volume) from a provided CT dataset.
         /// </summary>
         /// 
         /// <remarks>
@@ -191,7 +134,7 @@ namespace UnityCTVisualizer {
         /// 
         /// <returns>byte array of the requested chunk. TODO: describe the expected layout</returns>
         /// 
-        public static bool ImportChunk(string dataset_path, out byte[] data, UVDSMetadata metadata, int chunk_id, int resolution_lvl) {
+        public static bool ImportChunk(out byte[] data, int chunk_id, int resolution_lvl) {
             var chunk_fp = Path.Combine(dataset_path, $"chunk_{chunk_id}.uvds");
             if (!File.Exists(chunk_fp)) {
                 data = null;
@@ -201,7 +144,7 @@ namespace UnityCTVisualizer {
             return true;
         }
 
-        public static bool ImportChunk(string dataset_path, ref UInt16[] data, UVDSMetadata metadata, int chunk_id, int resolution_lvl) {
+        public static bool ImportChunk(string dataset_path, ref UInt16[] data, int chunk_id, int resolution_lvl) {
             string chunk_fp = Path.Combine(dataset_path, $"chunk_{chunk_id}.uvds");
             if (!File.Exists(chunk_fp)) {
                 return false;
@@ -215,13 +158,6 @@ namespace UnityCTVisualizer {
                 }
             }
             return true;
-            /*
-            if (metadata.Lz4Compressed) {
-                byte[] decompressed_data = new byte[metadata.BrickSizeBytes];
-                LZ4Codec.Decode(source: data, target: decompressed_data);
-                return decompressed_data;
-            }
-            */
         }
 
     }
