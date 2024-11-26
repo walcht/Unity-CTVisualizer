@@ -44,21 +44,20 @@ namespace UnityCTVisualizer {
         // VISUALIZATION PARAMETERS
         /////////////////////////////////
         private float m_AlphaCutoff = 254.0f / 255.0f;
-        private MaxIterations m_MaxIterations = MaxIterations._1024;
-        private INTERPOLATION m_Interpolation = INTERPOLATION.TRILLINEAR;
-
         public float AlphaCutoff {
             get => m_AlphaCutoff; set {
                 m_AlphaCutoff = value;
                 VisualizationParametersEvents.ModelAlphaCutoffChange?.Invoke(value);
             }
         }
+        private MaxIterations m_MaxIterations = MaxIterations._1024;
         public MaxIterations MaxIterations {
             get => m_MaxIterations; set {
                 m_MaxIterations = value;
                 VisualizationParametersEvents.ModelMaxIterationsChange?.Invoke(value);
             }
         }
+        private INTERPOLATION m_Interpolation = INTERPOLATION.TRILLINEAR;
         public INTERPOLATION InterpolationMethode {
             get => m_Interpolation; set {
                 m_Interpolation = value;
@@ -252,7 +251,6 @@ namespace UnityCTVisualizer {
                     return;
                 }
                 cache.Set((uint)i, new CacheEntry<byte>(data, 0, 0));
-        privat
                 brick_reply_queue.Enqueue((UInt32)i);
                 if (progressHandler != null) {
                     progressHandler.Progress += 1.0f / m_metadata.TotalNbrBricks;
